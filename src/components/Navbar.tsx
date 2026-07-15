@@ -19,9 +19,8 @@ export const Navbar: React.FC = () => {
 
         {/* Desktop Nav */}
         <nav className="hidden items-center gap-8 md:flex">
-          <NavLink to="/" className={({ isActive }) => cn('text-[11px] font-medium uppercase tracking-[0.2em] text-brand-green transition-colors hover:opacity-70', !isActive && 'opacity-40')}>Mercado Local</NavLink>
-          <NavLink to="/catalog" className={({ isActive }) => cn('text-[11px] font-medium uppercase tracking-[0.2em] text-brand-green transition-colors hover:opacity-70', !isActive && 'opacity-40')}>Cosecha del Día</NavLink>
-          <NavLink to="/admin" className={({ isActive }) => cn('text-[11px] font-medium uppercase tracking-[0.2em] text-brand-green transition-colors hover:opacity-70', !isActive && 'opacity-40')}>Admin Panel</NavLink>
+          <NavLink to="/" className={({ isActive }) => cn('text-[11px] font-medium uppercase tracking-[0.2em] text-brand-green transition-colors hover:opacity-70', !isActive && 'opacity-40')}>Inicio</NavLink>
+          <NavLink to="/catalog" className={({ isActive }) => cn('text-[11px] font-medium uppercase tracking-[0.2em] text-brand-green transition-colors hover:opacity-70', !isActive && 'opacity-40')}>Catálogo</NavLink>
         </nav>
 
         <div className="flex items-center gap-4">

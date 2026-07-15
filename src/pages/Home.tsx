@@ -29,14 +29,14 @@ export const Home: React.FC = () => {
           className="relative overflow-hidden rounded-[2.5rem] bg-white border border-stone-100 shadow-2xl px-6 py-16 text-left md:px-12 md:py-24"
         >
           <div className="relative z-10 max-w-xl">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold">Cosecha de Hoy</span>
+            <span className="text-[10px] uppercase tracking-[0.2em] text-brand-orange font-bold">Fresco y Seleccionado</span>
             <h1 className="mt-2 text-4xl font-bold leading-[1.1] tracking-tight text-brand-green md:text-6xl">
-              Directo del campo <br />
-              <span className="text-stone-800">a tu puerta.</span>
+              Tus frutas y verduras <br />
+              <span className="text-stone-800">sin salir de casa.</span>
             </h1>
             <p className="mt-6 text-sm text-stone-500 max-w-md">
-              Frutas y verduras frescas seleccionadas a mano cada mañana.
-              Sabor real, apoyo local y honestidad en cada entrega.
+              Frescas, seleccionadas para ti y entregadas en tu hogar el mismo día.
+              Sin filas, sin supermercado, sin perder tu tiempo.
             </p>
             <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row">
               <Link to="/catalog"
@@ -111,7 +111,7 @@ export const Home: React.FC = () => {
         <div className="mb-8 flex items-end justify-between">
           <div>
             <h2 className="text-2xl font-bold text-stone-800">Productos del día</h2>
-            <p className="text-stone-500">Lo mejor de la cosecha de hoy.</p>
+            <p className="text-stone-500">Lo mejor de la selección de hoy.</p>
           </div>
           <Link to="/catalog" className="text-sm font-bold text-[#F4820A] hover:underline underline-offset-4">Ver todo</Link>
         </div>
@@ -129,7 +129,7 @@ export const Home: React.FC = () => {
           <div className="flex flex-col items-center justify-between gap-8 md:flex-row">
             <div className="max-w-md">
               <h2 className="text-3xl font-bold text-stone-800">¿Listo para comer mejor?</h2>
-              <p className="mt-4 text-stone-600">Únete a las familias que ya disfrutan de la calidad artesanal de Fruto.app. Sin intermediarios, sin plástico excesivo.</p>
+              <p className="mt-4 text-stone-600">Únete a las familias que ya reciben sus frutas y verduras frescas en la puerta de su casa. Calidad seleccionada, sin filas ni supermercado.</p>
             </div>
             <Link to="/catalog"
               className="w-full rounded-2xl bg-[#F4820A] px-10 py-5 text-center text-lg font-bold text-white transition-all hover:bg-[#d47008] md:w-auto">

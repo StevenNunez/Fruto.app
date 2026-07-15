@@ -37,7 +37,7 @@ export const Catalog: React.FC = () => {
     <div className="px-4 pt-6 md:px-8 md:pt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-stone-800">Nuestro Mercado</h1>
-        <p className="text-stone-500">Elige productos frescos cosechados localmente.</p>
+        <p className="text-stone-500">Elige tus productos frescos, seleccionados para ti.</p>
       </div>
 
       {/* Search and Filters */}

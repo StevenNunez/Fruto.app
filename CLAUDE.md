@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Proyecto
 
-Fruto.app: aplicación de delivery de frutas y verduras locales (zona La Serena / Coquimbo / Las Compañías, Chile). SPA frontend-only en React 19 + TypeScript + Vite + Tailwind CSS 4, con Supabase como base de datos. Toda la UI está en español; los montos son CLP.
+Fruto.app: aplicación de delivery de frutas y verduras frescas a domicilio (zona La Serena / Coquimbo / Las Compañías, Chile). SPA frontend-only en React 19 + TypeScript + Vite + Tailwind CSS 4, con Supabase como base de datos. Toda la UI está en español; los montos son CLP.
+
+**Posicionamiento de marca (decisión del usuario, 2026-07-14):** el mensaje es "tus frutas y verduras en tu hogar, frescas y seleccionadas para ti, sin salir de casa" — conveniencia, frescura y selección. NO prometer origen de campo/cosecha propia/"sin intermediarios" en textos visibles al cliente (el negocio compra y revende; cuando haya proveedores directos se podrá comunicar).
 
 ## Comandos
 

@@ -11,7 +11,7 @@ const STEPS: { key: Order['status']; label: string; Icon: React.ElementType; msg
   { key: 'Pendiente',  label: 'Recibido',   Icon: CheckCircle2, msg: 'Tu pedido fue recibido. Lo estamos confirmando.' },
   { key: 'Preparando', label: 'Preparando', Icon: Package,      msg: 'Estamos seleccionando y empacando tus productos frescos.' },
   { key: 'En camino',  label: 'En camino',  Icon: Truck,        msg: '¡Ya viene en camino! Pronto estará en tu puerta.' },
-  { key: 'Entregado',  label: 'Entregado',  Icon: Home,         msg: '¡Entregado! Gracias por preferir lo local. ¡Buen provecho!' },
+  { key: 'Entregado',  label: 'Entregado',  Icon: Home,         msg: '¡Entregado! Gracias por tu compra. ¡Buen provecho!' },
 ];
 
 export const Confirmation: React.FC = () => {

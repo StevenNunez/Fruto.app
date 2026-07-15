@@ -1,6 +1,6 @@
 # Fruto.app
 
-Aplicación de delivery de frutas y verduras de productores locales, con entrega a domicilio en La Serena, Coquimbo y Las Compañías (Chile).
+Aplicación de delivery de frutas y verduras frescas a domicilio en La Serena, Coquimbo y Las Compañías (Chile).
 
 SPA en React 19 + TypeScript + Vite + Tailwind CSS 4, con Supabase como base de datos.
 
