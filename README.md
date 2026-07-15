@@ -1,20 +1,45 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Fruto.app
 
-# Run and deploy your AI Studio app
+Aplicación de delivery de frutas y verduras de productores locales, con entrega a domicilio en La Serena, Coquimbo y Las Compañías (Chile).
 
-This contains everything you need to run your app locally.
+SPA en React 19 + TypeScript + Vite + Tailwind CSS 4, con Supabase como base de datos.
 
-View your app in AI Studio: https://ai.studio/apps/8f27712e-14fe-4ef0-874e-9943d6783dab
+## Desarrollo
 
-## Run Locally
+**Requisitos:** Node.js 20+
 
-**Prerequisites:**  Node.js
+1. Instalar dependencias:
 
+   ```bash
+   npm install
+   ```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+2. Crear un archivo `.env` en la raíz (ver `.env.example`) con las credenciales de Supabase:
+
+   ```
+   VITE_SUPABASE_URL=...
+   VITE_SUPABASE_ANON_KEY=...
+   ```
+
+3. Ejecutar el schema de `supabase/schema.sql` en Supabase Dashboard → SQL Editor (solo la primera vez o al cambiar el schema).
+
+4. Levantar el servidor de desarrollo:
+
+   ```bash
+   npm run dev
+   ```
+
+   La app queda en http://localhost:3000 — tienda en `/`, panel de administración en `/admin`.
+
+## Comandos
+
+| Comando | Descripción |
+|---|---|
+| `npm run dev` | Servidor de desarrollo (puerto 3000) |
+| `npm run build` | Build de producción en `dist/` |
+| `npm run lint` | Chequeo de tipos (`tsc --noEmit`) |
+
+## Documentación
+
+- `PLAN.md` — plan de lanzamiento por fases (seguridad, pagos, UX).
+- `CLAUDE.md` — arquitectura y convenciones del código.

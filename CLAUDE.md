@@ -18,8 +18,7 @@ No hay tests configurados.
 
 ## Configuración
 
-- `.env` requiere `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (cliente en `src/lib/supabase.ts`).
-- `.env.example` está desactualizado (es un residuo de la plantilla de AI Studio con `GEMINI_API_KEY`); las variables reales son las de Supabase.
+- `.env` requiere `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (cliente en `src/lib/supabase.ts`); ver `.env.example`.
 - El schema de la base de datos está en `supabase/schema.sql` y se ejecuta manualmente en Supabase Dashboard → SQL Editor. Al agregar tablas o columnas hay que actualizar ese archivo y avisarle al usuario que lo ejecute.
 
 ## Arquitectura
@@ -48,11 +47,9 @@ Ojo: `schema.sql` ya define las tablas `config`, `gastos_fijos` y `product_costs
 - Estilos con clases Tailwind inline; `clsx` + `tailwind-merge` disponibles vía `src/lib/utils.ts`.
 - Las "colecciones" de la Home (Ensaladas, Smoothies, etc.) son datos estáticos en `src/lib/collections.ts`, no vienen de la BD.
 
-### Residuos de plantilla
+### Historia
 
-El proyecto nació de una plantilla de Google AI Studio: el README, `metadata.json`, y las dependencias `@google/genai` y `express` son restos de eso y no se usan en el código. No basarse en el README para instrucciones de setup.
-
-También hay datos demo sin uso: `src/data.ts` y `src/data/demoOrders.ts` no se importan desde ningún archivo (su eliminación está en la Fase 0 de PLAN.md).
+El proyecto nació de una plantilla de Google AI Studio; los residuos (deps sin uso, `metadata.json`, datos demo, README genérico) se limpiaron en la Fase 0 del plan (2026-07-14).
 
 ## Plan de lanzamiento
 

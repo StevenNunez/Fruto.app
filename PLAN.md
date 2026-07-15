@@ -19,20 +19,22 @@ Sin git: el proyecto no es repositorio git todavía.
 
 ---
 
-## Fase 0 — Fundaciones (rápida, hacer primero)
+## Fase 0 — Fundaciones (rápida, hacer primero) ✅ 2026-07-14
 
-- [ ] `git init` + primer commit (`.gitignore` ya excluye `.env` ✓).
-- [ ] Quitar dependencias sin uso: `@google/genai`, `express`, `dotenv`, `@types/express`, `tsx`, `esbuild` (residuos de plantilla AI Studio). Borrar `metadata.json`, reescribir `README.md`.
-- [ ] Revisar/borrar datos demo: `src/data.ts`, `src/data/demoOrders.ts` (verificar que nada los importe en producción).
-- [ ] `index.html`: `lang="es"`, meta description, theme-color, favicon, og:tags.
-- [ ] Fix menor en `src/index.css`: `tracking-grow` no es una propiedad CSS válida (debería ser `letter-spacing`).
+- [x] `git init` + primer commit (`.gitignore` ya excluye `.env` ✓).
+- [x] Quitar dependencias sin uso: `@google/genai`, `express`, `dotenv`, `@types/express`, `tsx`, `esbuild` (residuos de plantilla AI Studio; también `autoprefixer`, innecesario con Tailwind v4). Borrar `metadata.json`, reescribir `README.md`.
+- [x] Revisar/borrar datos demo: `src/data.ts`, `src/data/demoOrders.ts` (verificado: nada los importaba). También `src/pages/admin/AdminPlaceholder.tsx` (sin uso).
+- [x] `index.html`: `lang="es"`, meta description, theme-color, favicon, og:tags.
+- [x] Fix menor en `src/index.css`: `tracking-grow` no es una propiedad CSS válida (debería ser `letter-spacing`).
+- [x] Extras: `.env.example` reescrito con las variables reales de Supabase; `vite.config.ts` simplificado (residuos AI Studio); `npm audit fix` → 0 vulnerabilidades (Vite 6.4.3); `package.json` renombrado a `fruto-app`.
 
 ## Fase 1 — Seguridad (BLOQUEANTE: nada de público antes de esto)
 
 - [ ] **Habilitar RLS en todas las tablas** (nuevo archivo `supabase/policies.sql`, ejecutar en SQL Editor):
-  - `products`, `categories`, `config`, `stock`: SELECT público; escritura solo autenticado.
-  - `orders`: INSERT público (checkout anónimo); SELECT/UPDATE solo autenticado. Para que el cliente vea SU pedido en Confirmation sin exponer los demás: función RPC `get_order(order_id)` (security definer) o SELECT filtrado por id no adivinable.
-  - `costs`, `gastos_fijos`, `product_costs`: todo solo autenticado.
+  - ⚠️ **Diseñar las políticas pensando en la Fase 4 (cuentas de cliente)**: "autenticado" NO va a significar "admin" cuando los clientes también tengan cuenta. Usar una verificación explícita de admin (tabla `admins` con el uid del productor, o claim en el JWT) en vez de `authenticated` a secas para las políticas de escritura/lectura sensible.
+  - `products`, `categories`, `config`, `stock`: SELECT público; escritura solo admin.
+  - `orders`: INSERT público (checkout anónimo); SELECT/UPDATE solo admin. Para que el cliente vea SU pedido en Confirmation sin exponer los demás: función RPC `get_order(order_id)` (security definer) o SELECT filtrado por id no adivinable.
+  - `costs`, `gastos_fijos`, `product_costs`: todo solo admin.
 - [ ] **Stock público sin exponer pedidos**: crear vista o RPC `stock_remaining()` (security definer) que devuelva `{product_id, remaining}` calculado en Postgres. Reemplazar `computeStockRemaining()` de `Home.tsx`/`Catalog.tsx` (hoy duplicada — extraer a `src/lib/stock.ts`) por esa llamada. Elimina la fuga de PII y baja el peso de datos.
 - [ ] **Autenticación del admin**: Supabase Auth con un solo usuario (email/password del productor). Crear `RequireAuth` que envuelva `AdminLayout`, página de login `/admin/login`, botón cerrar sesión.
 - [ ] **Migrar config a Supabase** (tabla `config` ya existe en el schema): reescribir `src/lib/config.ts` para leer/escribir la fila id=1. Lectura pública (los clientes necesitan horarios, despacho, WhatsApp, datos de transferencia), escritura autenticada. **Esto arregla los datos bancarios falsos.** Sacar los datos personales reales de `DEFAULT_CONFIG`.
@@ -60,6 +62,7 @@ Se necesita un backend mínimo porque el Access Token de MP es secreto. Recomend
 - [ ] **Imágenes**: `loading="lazy"` + `decoding="async"` en `ProductCard`; las imágenes son URLs externas — a mediano plazo subirlas a Supabase Storage con tamaños optimizados.
 - [ ] **Fuente**: quitar el `@import` de Google Fonts en `index.css` (bloquea render); usar `<link rel="preconnect">` + `<link>` en `index.html`, o self-host con `font-display: swap`.
 - [ ] Deduplicar `computeStockRemaining` (se hace en Fase 1 con el RPC).
+- [ ] **Code-splitting del admin**: el bundle actual pesa ~827 kB porque todo `/admin` se descarga junto con la tienda. Cargar las páginas admin con `React.lazy()` para que el cliente móvil solo baje la tienda.
 - [ ] Confirmation: detener el polling de 10s cuando el pedido llega a "Entregado" y cuando la pestaña está oculta (`document.visibilityState`).
 - [ ] Checkout móvil: el resumen del pedido queda abajo en pantallas chicas — agregar barra fija inferior con total + botón confirmar (patrón mobile-first).
 - [ ] Validar teléfono chileno en checkout (formato +56 9) — es el único canal de contacto con el cliente.
@@ -67,7 +70,20 @@ Se necesita un backend mínimo porque el Access Token de MP es secreto. Recomend
 - [ ] PWA básica: `manifest.json` + iconos para "Agregar a pantalla de inicio" (opcional pero barato y valioso siendo mobile-first).
 - [ ] Accesibilidad mínima: textos `text-[10px]`/`text-[9px]` son muy chicos para tocar/leer en móvil; revisar áreas táctiles ≥44px en botones +/- del ProductCard.
 
-## Fase 4 — Pulido pre-lanzamiento
+## Fase 4 — Cuentas de cliente (opcionales)
+
+> Principio rector: **comprar como invitado sigue siendo el flujo principal y no debe agregar ni un paso**. La cuenta es 100% opcional; su valor es que la segunda compra sea aún más rápida (datos precargados), más historial y futuras ofertas.
+
+- [ ] Supabase Auth para clientes (email + password, o magic link — decidir por simplicidad). El mismo sistema de auth del admin (Fase 1) pero con rol distinto: el admin se distingue por tabla `admins`/claim, nunca por "estar autenticado".
+- [ ] Tabla `profiles` (id = `auth.uid()`, nombre, teléfono, dirección, sector) con RLS: cada cliente lee/escribe solo su propia fila.
+- [ ] Columna `orders.user_id` (nullable): los pedidos de invitados quedan sin usuario; los de clientes con sesión quedan vinculados a su cuenta.
+- [ ] **Invitación post-compra en Confirmation** (momento ideal, sin fricción): "¿Quieres guardar tus datos para que la próxima compra sea más rápida?" → crea la cuenta reutilizando los datos ya ingresados en el checkout (solo pide email y contraseña).
+- [ ] Checkout con sesión activa: precargar nombre, teléfono, dirección y sector desde `profiles`.
+- [ ] Página "Mi cuenta": datos de entrega editables + historial de pedidos + botón "repetir pedido" (rellena el carrito con un pedido anterior).
+- [ ] Entrada discreta en la UI: icono de cuenta en el navbar (y en MobileNav). Nunca interrumpir ni condicionar el flujo de compra.
+- [ ] Base para ofertas a registrados: campo opt-in de ofertas en `profiles` (para futuras promociones/email); las ofertas mismas quedan para después del lanzamiento.
+
+## Fase 5 — Pulido pre-lanzamiento
 
 - [ ] Revisar admin en móvil real (el productor opera desde el teléfono): tablas de Pedidos/Precios en pantallas chicas.
 - [ ] Página 404 (ruta comodín en App.tsx).
@@ -78,8 +94,10 @@ Se necesita un backend mínimo porque el Access Token de MP es secreto. Recomend
 
 ## Orden recomendado de sesiones
 
-1. **Sesión 1**: Fase 0 completa + RLS + fix del checkout que traga errores (lo más urgente y autocontenido).
+1. **Sesión 1**: ~~Fase 0 completa~~ ✅ + RLS + fix del checkout que traga errores (lo más urgente y autocontenido).
 2. **Sesión 2**: Auth del admin + migración de config a Supabase + RPC de stock.
 3. **Sesión 3**: Deploy a Vercel + Mercado Pago en modo TEST.
 4. **Sesión 4**: Webhook + estados de pago + pruebas end-to-end; pasar MP a producción.
-5. **Sesión 5**: Fase 3 (UX/rendimiento) + Fase 4 (pulido y checklist final).
+5. **Sesión 5**: Fase 3 (UX/rendimiento).
+6. **Sesión 6**: Fase 4 (cuentas de cliente opcionales).
+7. **Sesión 7**: Fase 5 (pulido y checklist final).
