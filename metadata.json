@@ -1,0 +1,6 @@
+{
+  "name": "Fruto.app",
+  "description": "Venta de frutas y verduras frescas del campo a tu puerta con entrega local.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

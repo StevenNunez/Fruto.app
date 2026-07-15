@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --color-brand-green: #2D6A4F;
+  --color-brand-orange: #F4820A;
+  --color-bg-base: #FAFAF7;
+  --color-text-main: #1A1A1A;
+}
+
+@layer base {
+  body {
+    -webkit-tap-highlight-color: transparent;
+    @apply bg-bg-base text-text-main;
+  }
+}
+
+@layer utilities {
+  .tracking-widest-xs {
+    tracking-grow: 0.15em;
+  }
+}
+
+.input-field {
+  @apply w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-brand-green/40 focus:bg-white focus:ring-2 focus:ring-brand-green/15;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe areas for mobile */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
