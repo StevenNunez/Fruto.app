@@ -2,28 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { loadProducts, loadCategories } from '../lib/products';
-import { loadOrders } from '../lib/orders';
-import { loadStockInit } from '../lib/stock';
+import { loadStockRemaining } from '../lib/stock';
 import { COLLECTIONS } from '../lib/collections';
 import { ProductCard } from '../components/ProductCard';
 import { Product } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-
-async function computeStockRemaining(): Promise<Record<string, number>> {
-  const [stockInit, orders] = await Promise.all([loadStockInit(), loadOrders()]);
-  const demand: Record<string, number> = {};
-  for (const order of orders.filter((o) => o.status !== 'Entregado')) {
-    for (const item of order.items) {
-      demand[item.id] = (demand[item.id] ?? 0) + item.quantity;
-    }
-  }
-  const remaining: Record<string, number> = {};
-  for (const [id, init] of Object.entries(stockInit)) {
-    remaining[id] = init - (demand[id] ?? 0);
-  }
-  return remaining;
-}
 
 export const Catalog: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -37,7 +21,7 @@ export const Catalog: React.FC = () => {
   useEffect(() => {
     loadProducts().then(setProducts);
     loadCategories().then(setCategories);
-    computeStockRemaining().then(setStockRemaining);
+    loadStockRemaining().then(setStockRemaining);
   }, []);
 
   const activeCollection = COLLECTIONS.find((c) => c.id === selectedCollection) ?? null;

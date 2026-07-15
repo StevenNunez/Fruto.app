@@ -13,6 +13,19 @@ export async function loadStockInit(): Promise<StockInit> {
   );
 }
 
+// Stock disponible por producto, calculado en la base de datos (RPC
+// security definer) para no exponer los pedidos al público.
+export async function loadStockRemaining(): Promise<Record<string, number>> {
+  const { data, error } = await supabase.rpc('stock_remaining');
+  if (error || !data) {
+    if (error) console.error('stock_remaining:', error.message);
+    return {};
+  }
+  return Object.fromEntries(
+    (data as { product_id: string; remaining: number }[]).map((r) => [r.product_id, r.remaining])
+  );
+}
+
 export async function setStock(productId: string, initialStock: number): Promise<void> {
   await supabase
     .from('stock')

@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import { Layout } from './components/Layout';
 import { AdminLayout } from './components/admin/AdminLayout';
+import { RequireAuth } from './components/admin/RequireAuth';
+import { AdminLogin } from './pages/admin/Login';
 import { Home } from './pages/Home';
 import { Catalog } from './pages/Catalog';
 import { Cart } from './pages/Cart';
@@ -34,7 +36,8 @@ export default function App() {
             <Route path="confirmation" element={<Confirmation />} />
           </Route>
 
-          <Route path="/admin" element={<AdminLayout />}>
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin" element={<RequireAuth><AdminLayout /></RequireAuth>}>
             <Route index element={<Admin />} />
             <Route path="pedidos" element={<AdminPedidos />} />
             <Route path="ruta" element={<AdminRuta />} />

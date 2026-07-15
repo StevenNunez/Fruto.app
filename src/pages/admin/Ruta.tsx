@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MapPin } from 'lucide-react';
 import { Order, OrderStatus, Sector } from '../../types';
-import { loadOrders, formatCLP } from '../../lib/orders';
+import { loadOrders, formatCLP, shortOrderId } from '../../lib/orders';
 import { cn } from '../../lib/utils';
 
 const STATUS_DOT: Record<OrderStatus, string> = {
@@ -79,7 +79,7 @@ export const AdminRuta: React.FC = () => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-bold text-stone-500">#{order.id}</span>
+                          <span className="text-xs font-bold text-stone-500">#{shortOrderId(order.id)}</span>
                           <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[order.status])} />
                           <span className="text-[10px] font-semibold uppercase text-stone-500">{order.status}</span>
                         </div>

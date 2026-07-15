@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Package, MapPin, BookOpen, Users, Leaf, BarChart2, Settings, Wallet, TrendingUp, Tag, Truck, Swords } from 'lucide-react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Package, MapPin, BookOpen, Users, Leaf, BarChart2, Settings, Wallet, TrendingUp, Tag, Truck, Swords, LogOut } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { loadConfig } from '../../lib/config';
+import { signOut } from '../../lib/auth';
 
 function getInitials(name: string): string {
   return name.trim().split(/\s+/).map((w) => w[0] ?? '').join('').toUpperCase().slice(0, 2);
@@ -27,6 +28,11 @@ const NAV = [
 export const AdminLayout: React.FC = () => {
   const [config] = useState(loadConfig);
   const initials = getInitials(config.adminName);
+  const navigate = useNavigate();
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/admin/login', { replace: true });
+  };
   return (
     <div className="flex min-h-screen bg-[#F4F4F1] font-sans text-stone-900">
       {/* Sidebar – desktop */}
@@ -68,10 +74,14 @@ export const AdminLayout: React.FC = () => {
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#2D6A4F] text-xs font-bold text-white">
               {initials}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-stone-800">{config.adminName}</p>
               <p className="truncate text-xs text-stone-500">Productor · La Serena</p>
             </div>
+            <button type="button" onClick={handleSignOut} title="Cerrar sesión"
+              className="shrink-0 rounded-lg p-2 text-stone-400 transition hover:bg-stone-200/60 hover:text-stone-700">
+              <LogOut size={15} />
+            </button>
           </div>
         </div>
       </aside>
@@ -88,8 +98,14 @@ export const AdminLayout: React.FC = () => {
               Panel productor
             </p>
           </div>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2D6A4F] text-[10px] font-bold text-white">
-            {initials}
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2D6A4F] text-[10px] font-bold text-white">
+              {initials}
+            </div>
+            <button type="button" onClick={handleSignOut} title="Cerrar sesión"
+              className="rounded-lg p-2 text-stone-400 transition hover:bg-stone-200/60 hover:text-stone-700">
+              <LogOut size={16} />
+            </button>
           </div>
         </header>
 

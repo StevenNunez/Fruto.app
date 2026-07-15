@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 import { Order } from '../types';
 import { cn } from '../lib/utils';
 import { loadConfig } from '../lib/config';
-import { loadOrderById } from '../lib/orders';
+import { loadOrderById, shortOrderId } from '../lib/orders';
 
 const STEPS: { key: Order['status']; label: string; Icon: React.ElementType; msg: string }[] = [
   { key: 'Pendiente',  label: 'Recibido',   Icon: CheckCircle2, msg: 'Tu pedido fue recibido. Lo estamos confirmando.' },
@@ -51,7 +51,7 @@ export const Confirmation: React.FC = () => {
           </div>
           <h1 className="text-2xl font-bold text-stone-800">¡Pedido confirmado!</h1>
           <p className="mt-1 text-sm text-stone-500">
-            Pedido <span className="font-bold text-stone-700">#{orderId}</span>
+            Pedido <span className="font-bold text-stone-700">#{shortOrderId(orderId)}</span>
           </p>
         </motion.div>
 

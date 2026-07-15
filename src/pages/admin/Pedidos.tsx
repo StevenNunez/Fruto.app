@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Download, CheckCircle2, X, Truck } from 'lucide-react';
 import { Order, OrderStatus, Sector } from '../../types';
 import { cn } from '../../lib/utils';
-import { loadOrders, updateOrderStatus, formatCLP } from '../../lib/orders';
+import { loadOrders, updateOrderStatus, formatCLP, shortOrderId } from '../../lib/orders';
 
 const STATUSES: OrderStatus[] = ['Pendiente', 'Preparando', 'En camino', 'Entregado'];
 
@@ -25,7 +25,7 @@ function exportRoute(orders: Order[]) {
   const active = orders.filter((o) => o.status !== 'Entregado');
   const headers = ['ID', 'Cliente', 'Dirección', 'Sector', 'Estado', 'Productos', 'Total', 'Pago', 'Notas'];
   const rows = active.map((o) => [
-    o.id, o.customerName, o.customerAddress, o.customerSector, o.status,
+    shortOrderId(o.id), o.customerName, o.customerAddress, o.customerSector, o.status,
     o.items.map((i) => `${i.quantity}x ${i.name}`).join(' / '),
     formatCLP(o.total), o.paymentMethod, o.notes ?? '',
   ]);
@@ -271,7 +271,7 @@ function OrderCard({ order, onAdvance, onStatusChange }: {
   return (
     <article className="rounded-xl border border-stone-200/90 bg-white p-3.5 shadow-sm">
       <div className="mb-2 flex items-start justify-between gap-2">
-        <span className="text-sm font-bold text-stone-800">#{order.id}</span>
+        <span className="text-sm font-bold text-stone-800">#{shortOrderId(order.id)}</span>
         <span className="text-sm font-bold text-stone-800">{formatCLP(order.total)}</span>
       </div>
       <p className="font-semibold text-stone-800">{order.customerName}</p>
@@ -311,7 +311,7 @@ function ListOrderRow({ order, onAdvance, onStatusChange }: {
       <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-bold text-stone-800">#{order.id}</span>
+            <span className="font-bold text-stone-800">#{shortOrderId(order.id)}</span>
             <StatusBadge status={order.status} />
           </div>
           <p className="mt-1 font-semibold text-stone-800">{order.customerName}</p>

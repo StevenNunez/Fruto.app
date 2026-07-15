@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
-import { CreditCard, Landmark, Truck, CheckCircle2, ChevronRight } from 'lucide-react';
+import { CreditCard, Landmark, Truck, CheckCircle2, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { cn } from '../lib/utils';
 import { Sector } from '../types';
@@ -29,6 +29,7 @@ export const Checkout: React.FC = () => {
   );
   const [formData, setFormData] = useState({ name: '', address: '', phone: '', notes: '' });
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
 
   if (items.length === 0 && !submitted.current) return <Navigate to="/cart" replace />;
 
@@ -40,7 +41,10 @@ export const Checkout: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const orderId = Math.random().toString(36).substring(2, 9).toUpperCase();
+    setSubmitError(false);
+    // UUID no adivinable: es la "llave" con la que el cliente puede ver su
+    // pedido en Confirmation sin exponer los pedidos de otros.
+    const orderId = crypto.randomUUID();
     const order = {
       id: orderId,
       customerName: formData.name.trim(),
@@ -57,7 +61,11 @@ export const Checkout: React.FC = () => {
     try {
       await createOrder(order);
     } catch (err) {
+      // Si el pedido NO se guardó: avisar y conservar el carrito para reintentar.
       console.error('Error al crear pedido:', err);
+      setSubmitError(true);
+      setLoading(false);
+      return;
     }
     localStorage.setItem('fruto_last_order_id', orderId);
     submitted.current = true;
@@ -192,10 +200,19 @@ export const Checkout: React.FC = () => {
               </div>
             </div>
 
+            {submitError && (
+              <div className="mt-5 flex items-start gap-2.5 rounded-2xl border border-red-200 bg-red-50 p-4">
+                <AlertTriangle size={16} className="mt-0.5 shrink-0 text-red-500" />
+                <div className="text-xs text-red-700">
+                  <p className="font-bold">No pudimos enviar tu pedido.</p>
+                  <p className="mt-0.5">Revisa tu conexión a internet e inténtalo de nuevo. Tu carrito sigue guardado.</p>
+                </div>
+              </div>
+            )}
             <button type="submit" disabled={loading}
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-orange py-4 font-bold text-white shadow-lg shadow-brand-orange/20 transition hover:bg-brand-orange/90 active:scale-95 disabled:opacity-60">
               <CheckCircle2 size={17} />
-              {loading ? 'Enviando pedido...' : 'Confirmar pedido'}
+              {loading ? 'Enviando pedido...' : submitError ? 'Reintentar pedido' : 'Confirmar pedido'}
             </button>
             <p className="mt-2.5 text-center text-[10px] text-stone-400">
               Entrega hoy entre {config.deliveryWindow}

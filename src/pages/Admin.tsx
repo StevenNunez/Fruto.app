@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, MapPin, Users, Leaf, BarChart2, ArrowRight, ShoppingBasket, Clock, TrendingUp, Tag } from 'lucide-react';
 import { Order, OrderStatus } from '../types';
-import { loadOrders, formatCLP } from '../lib/orders';
+import { loadOrders, formatCLP, shortOrderId } from '../lib/orders';
 import { cn } from '../lib/utils';
 
 const STATUS_DOT: Record<OrderStatus, string> = {
@@ -146,7 +146,7 @@ export const Admin: React.FC = () => {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', STATUS_DOT[order.status])} />
-                      <span className="text-[11px] font-bold text-stone-400">#{order.id}</span>
+                      <span className="text-[11px] font-bold text-stone-400">#{shortOrderId(order.id)}</span>
                     </div>
                     <p className="mt-0.5 truncate text-sm font-semibold text-stone-800">{order.customerName}</p>
                     <p className="text-xs text-stone-400">{order.customerSector} · {order.items.map((i) => `${i.quantity}× ${i.name}`).join(', ')}</p>

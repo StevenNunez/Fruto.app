@@ -3,26 +3,10 @@ import { ArrowRight, Truck, Clock, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { loadProducts } from '../lib/products';
-import { loadOrders } from '../lib/orders';
-import { loadStockInit } from '../lib/stock';
+import { loadStockRemaining } from '../lib/stock';
 import { COLLECTIONS } from '../lib/collections';
 import { Product } from '../types';
 import { ProductCard } from '../components/ProductCard';
-
-async function computeStockRemaining(): Promise<Record<string, number>> {
-  const [stockInit, orders] = await Promise.all([loadStockInit(), loadOrders()]);
-  const demand: Record<string, number> = {};
-  for (const order of orders.filter((o) => o.status !== 'Entregado')) {
-    for (const item of order.items) {
-      demand[item.id] = (demand[item.id] ?? 0) + item.quantity;
-    }
-  }
-  const remaining: Record<string, number> = {};
-  for (const [id, init] of Object.entries(stockInit)) {
-    remaining[id] = init - (demand[id] ?? 0);
-  }
-  return remaining;
-}
 
 export const Home: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -30,7 +14,7 @@ export const Home: React.FC = () => {
 
   useEffect(() => {
     loadProducts().then(setProducts);
-    computeStockRemaining().then(setStockRemaining);
+    loadStockRemaining().then(setStockRemaining);
   }, []);
 
   const featuredProducts = products.filter((p) => p.isSeason).slice(0, 4);

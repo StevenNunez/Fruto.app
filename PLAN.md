@@ -30,16 +30,16 @@ Sin git: el proyecto no es repositorio git todavía.
 
 ## Fase 1 — Seguridad (BLOQUEANTE: nada de público antes de esto)
 
-- [ ] **Habilitar RLS en todas las tablas** (nuevo archivo `supabase/policies.sql`, ejecutar en SQL Editor):
+- [x] **Habilitar RLS en todas las tablas** (`supabase/policies.sql` creado 2026-07-14 — ⚠️ PENDIENTE: ejecutarlo en el SQL Editor + crear el usuario admin, instrucciones en el propio archivo):
   - ⚠️ **Diseñar las políticas pensando en la Fase 4 (cuentas de cliente)**: "autenticado" NO va a significar "admin" cuando los clientes también tengan cuenta. Usar una verificación explícita de admin (tabla `admins` con el uid del productor, o claim en el JWT) en vez de `authenticated` a secas para las políticas de escritura/lectura sensible.
   - `products`, `categories`, `config`, `stock`: SELECT público; escritura solo admin.
   - `orders`: INSERT público (checkout anónimo); SELECT/UPDATE solo admin. Para que el cliente vea SU pedido en Confirmation sin exponer los demás: función RPC `get_order(order_id)` (security definer) o SELECT filtrado por id no adivinable.
   - `costs`, `gastos_fijos`, `product_costs`: todo solo admin.
-- [ ] **Stock público sin exponer pedidos**: crear vista o RPC `stock_remaining()` (security definer) que devuelva `{product_id, remaining}` calculado en Postgres. Reemplazar `computeStockRemaining()` de `Home.tsx`/`Catalog.tsx` (hoy duplicada — extraer a `src/lib/stock.ts`) por esa llamada. Elimina la fuga de PII y baja el peso de datos.
-- [ ] **Autenticación del admin**: Supabase Auth con un solo usuario (email/password del productor). Crear `RequireAuth` que envuelva `AdminLayout`, página de login `/admin/login`, botón cerrar sesión.
+- [x] **Stock público sin exponer pedidos**: RPC `stock_remaining()` (security definer) en `policies.sql`; `computeStockRemaining()` eliminada de `Home.tsx`/`Catalog.tsx`, reemplazada por `loadStockRemaining()` en `src/lib/stock.ts`. Elimina la fuga de PII.
+- [x] **Autenticación del admin**: `RequireAuth` envuelve `AdminLayout`, login en `/admin/login` (`src/pages/admin/Login.tsx`, `src/lib/auth.ts`), botón cerrar sesión en sidebar y header móvil. ⚠️ PENDIENTE: crear el usuario en Supabase Dashboard → Authentication → Users y registrarlo en la tabla `admins` (instrucciones en `policies.sql`).
 - [ ] **Migrar config a Supabase** (tabla `config` ya existe en el schema): reescribir `src/lib/config.ts` para leer/escribir la fila id=1. Lectura pública (los clientes necesitan horarios, despacho, WhatsApp, datos de transferencia), escritura autenticada. **Esto arregla los datos bancarios falsos.** Sacar los datos personales reales de `DEFAULT_CONFIG`.
-- [ ] **IDs de pedido no adivinables**: reemplazar `Math.random().substring(2,9)` por `crypto.randomUUID()` (mostrar al cliente solo los primeros 8 chars como número de pedido).
-- [ ] **Arreglar el checkout que traga errores**: si `createOrder` falla → mostrar error al cliente, NO limpiar carrito, NO navegar a confirmación. Botón reintentar.
+- [x] **IDs de pedido no adivinables**: `crypto.randomUUID()` en Checkout; helper `shortOrderId()` muestra los primeros 8 chars como número de pedido (Confirmation, Admin, Pedidos, Ruta, CSV). El cliente ve su pedido vía RPC `get_order(order_id)`.
+- [x] **Arreglar el checkout que traga errores**: si `createOrder` falla → banner de error, el carrito se conserva, no navega; el botón pasa a "Reintentar pedido".
 - [ ] Migrar también `gastos_fijos` y `product_costs` de localStorage a Supabase (tablas ya existen; hoy `Precios.tsx` y `Finanzas.tsx` usan localStorage). `competidores` y `proveedores` no tienen tabla aún — crearlas o dejarlas en localStorage (solo las usa el admin, decisión de prioridad).
 
 ## Fase 2 — Backend + Mercado Pago (Checkout Pro)

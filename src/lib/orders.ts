@@ -57,9 +57,13 @@ export async function loadOrders(): Promise<Order[]> {
   return (data as DbOrder[]).map(mapOrder);
 }
 
+// Usa la RPC get_order (security definer): con RLS activo el público no
+// puede hacer SELECT sobre orders, pero sí ver SU pedido conociendo el id.
 export async function loadOrderById(id: string): Promise<Order | null> {
-  const { data } = await supabase.from('orders').select('*').eq('id', id).single();
-  return data ? mapOrder(data as DbOrder) : null;
+  const { data, error } = await supabase.rpc('get_order', { order_id: id });
+  if (error) { console.error('get_order:', error.message); return null; }
+  const row = (data as DbOrder[] | null)?.[0];
+  return row ? mapOrder(row) : null;
 }
 
 export async function createOrder(order: Order): Promise<void> {
@@ -74,4 +78,10 @@ export async function updateOrderStatus(id: string, status: Order['status']): Pr
 
 export function formatCLP(value: number): string {
   return `$${value.toLocaleString('es-CL')}`;
+}
+
+// Los ids son UUIDs (no adivinables); al mostrarlos como "número de
+// pedido" se usan solo los primeros 8 caracteres.
+export function shortOrderId(id: string): string {
+  return id.slice(0, 8).toUpperCase();
 }
