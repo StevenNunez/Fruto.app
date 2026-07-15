@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { CreditCard, Landmark, Truck, CheckCircle2, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { cn } from '../lib/utils';
 import { Sector } from '../types';
-import { loadConfig, getActiveSectors } from '../lib/config';
+import { loadConfig, getActiveSectors, DEFAULT_CONFIG } from '../lib/config';
 import { createOrder } from '../lib/orders';
 
 const PAYMENT_OPTIONS = [
@@ -17,7 +17,7 @@ export const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const submitted = useRef(false);
 
-  const [config] = useState(loadConfig);
+  const [config, setConfig] = useState(DEFAULT_CONFIG);
   const sectors = getActiveSectors(config.sectors);
   const payments = PAYMENT_OPTIONS.filter((m) =>
     m.id === 'MercadoPago' ? config.paymentMethods.mercadopago : config.paymentMethods.transferencia
@@ -27,6 +27,21 @@ export const Checkout: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'MercadoPago' | 'Transferencia'>(
     payments[0]?.id ?? 'MercadoPago'
   );
+
+  useEffect(() => {
+    loadConfig().then((cfg) => {
+      setConfig(cfg);
+      // Si la config real desactiva el sector o método elegido por defecto,
+      // mover la selección a una opción disponible.
+      const active = getActiveSectors(cfg.sectors);
+      if (active.length > 0) setSector((s) => (active.includes(s) ? s : active[0]));
+      setPaymentMethod((m) => {
+        const stillOk = m === 'MercadoPago' ? cfg.paymentMethods.mercadopago : cfg.paymentMethods.transferencia;
+        if (stillOk) return m;
+        return cfg.paymentMethods.mercadopago ? 'MercadoPago' : 'Transferencia';
+      });
+    });
+  }, []);
   const [formData, setFormData] = useState({ name: '', address: '', phone: '', notes: '' });
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState(false);

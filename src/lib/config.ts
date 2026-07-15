@@ -1,3 +1,4 @@
+import { supabase } from './supabase';
 import type { Sector } from '../types';
 
 export type Config = {
@@ -16,13 +17,17 @@ export type Config = {
   paymentMethods: { mercadopago: boolean; transferencia: boolean };
 };
 
+// Valores neutros de respaldo. Los datos reales del negocio viven en
+// Supabase (tabla config, fila id=1) y se editan en /admin/configuracion.
+// NUNCA poner aquí datos bancarios, WhatsApp ni nombres reales: esto es
+// lo que vería un cliente si la carga desde Supabase falla.
 export const DEFAULT_CONFIG: Config = {
   businessName: 'Fruto.app',
-  adminName: 'Tomás G.',
-  whatsapp: '56912345678',
-  bankName: 'Banco Estado',
-  bankRut: '12.345.678-9',
-  bankAccountName: 'Fruto.app',
+  adminName: '',
+  whatsapp: '',
+  bankName: '',
+  bankRut: '',
+  bankAccountName: '',
   cutoffTime: '15:00',
   deliveryTime: '18:30',
   deliveryWindow: '7:00 – 10:00 PM',
@@ -42,14 +47,31 @@ export function getActiveSectors(sectors: Config['sectors']): Sector[] {
   return SECTOR_MAP.filter((s) => sectors[s.key]).map((s) => s.label);
 }
 
-export function loadConfig(): Config {
+// Copia antigua en localStorage (solo existe en el navegador del
+// productor). Se usa una única vez como puente de migración mientras
+// la fila de Supabase siga vacía; al guardar en /admin/configuracion
+// queda todo en Supabase.
+function localLegacyConfig(): Partial<Config> {
   try {
-    const saved = localStorage.getItem('fruto_config');
-    if (saved) return { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
-  } catch {}
-  return DEFAULT_CONFIG;
+    return JSON.parse(localStorage.getItem('fruto_config') ?? '{}');
+  } catch {
+    return {};
+  }
 }
 
-export function saveConfig(config: Config) {
-  localStorage.setItem('fruto_config', JSON.stringify(config));
+export async function loadConfig(): Promise<Config> {
+  try {
+    const { data, error } = await supabase.from('config').select('data').eq('id', 1).maybeSingle();
+    if (error) console.error('loadConfig:', error.message);
+    const saved = (data?.data ?? {}) as Partial<Config>;
+    if (Object.keys(saved).length > 0) return { ...DEFAULT_CONFIG, ...saved };
+  } catch (err) {
+    console.error('loadConfig:', err);
+  }
+  return { ...DEFAULT_CONFIG, ...localLegacyConfig() };
+}
+
+export async function saveConfig(config: Config): Promise<void> {
+  const { error } = await supabase.from('config').upsert({ id: 1, data: config });
+  if (error) throw new Error(error.message);
 }

@@ -8,52 +8,11 @@ import {
 } from 'lucide-react';
 import { formatCLP } from '../../lib/orders';
 import { cn } from '../../lib/utils';
-
-/* ─────────────────────────────────────────────────────────
-   Types
-───────────────────────────────────────────────────────── */
-type Frecuencia = 'mensual' | 'anual';
-
-type GastoFijo = {
-  id: string;
-  name: string;
-  amount: number;
-  frecuencia: Frecuencia;
-};
-
-type ExtraCosto = {
-  id: string;
-  name: string;
-  amount: number;
-};
-
-type ProductoCosto = {
-  id: string;
-  name: string;
-  purchaseCost: number;
-  bulkUnit: string;
-  bulkQty: number;
-  sellUnit: string;
-  merma: number;           // % pérdida
-  extraCosts: ExtraCosto[];
-  sellPrice: number;
-};
-
-/* ─────────────────────────────────────────────────────────
-   Storage
-───────────────────────────────────────────────────────── */
-function loadGastos(): GastoFijo[] {
-  try { return JSON.parse(localStorage.getItem('fruto_gastos_fijos') ?? '[]'); } catch { return []; }
-}
-function saveGastos(d: GastoFijo[]) { localStorage.setItem('fruto_gastos_fijos', JSON.stringify(d)); }
-
-function loadProductos(): ProductoCosto[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem('fruto_product_costs') ?? '[]') as ProductoCosto[];
-    return raw.map(p => ({ merma: 0, extraCosts: [], ...p }));
-  } catch { return []; }
-}
-function saveProductos(d: ProductoCosto[]) { localStorage.setItem('fruto_product_costs', JSON.stringify(d)); }
+import {
+  type Frecuencia, type GastoFijo, type ProductoCosto,
+  loadGastosFijos, saveGastosFijos, deleteGastoFijo,
+  loadProductosCosto, saveProductosCosto, deleteProductoCosto,
+} from '../../lib/precios';
 
 /* ─────────────────────────────────────────────────────────
    Cálculos
@@ -490,8 +449,8 @@ export const AdminPrecios: React.FC = () => {
   const [prodError, setProdError] = useState('');
 
   useEffect(() => {
-    setGastos(loadGastos());
-    setProductos(loadProductos());
+    loadGastosFijos().then(setGastos);
+    loadProductosCosto().then((raw) => setProductos(raw.map(p => ({ merma: 0, extraCosts: [], ...p }))));
   }, []);
 
   const totalMensual = useMemo(() =>
@@ -506,7 +465,7 @@ export const AdminPrecios: React.FC = () => {
     if (!amount || amount <= 0) { setGastoError('Monto inválido.'); return; }
     setGastoError('');
     const next = [...gastos, { id: Date.now().toString(), name: gastoForm.name.trim(), amount, frecuencia: gastoForm.frecuencia }];
-    setGastos(next); saveGastos(next);
+    setGastos(next); saveGastosFijos(next);
     setGastoForm(EMPTY_GASTO);
   }
 
@@ -518,12 +477,12 @@ export const AdminPrecios: React.FC = () => {
     const amount = Number(editForm.amount);
     if (!editForm.name.trim() || !amount || amount <= 0) return;
     const next = gastos.map(g => g.id === id ? { ...g, name: editForm.name.trim(), amount, frecuencia: editForm.frecuencia } : g);
-    setGastos(next); saveGastos(next);
+    setGastos(next); saveGastosFijos(next);
     setEditingId(null);
   }
   function deleteGasto(id: string) {
-    const next = gastos.filter(g => g.id !== id);
-    setGastos(next); saveGastos(next);
+    setGastos(gastos.filter(g => g.id !== id));
+    deleteGastoFijo(id);
   }
 
   /* ── Productos CRUD ── */
@@ -541,7 +500,7 @@ export const AdminPrecios: React.FC = () => {
       ...productos,
       { id: Date.now().toString(), name: prodForm.name.trim(), purchaseCost: cost, bulkUnit: prodForm.bulkUnit, bulkQty: qty, sellUnit: prodForm.sellUnit, merma: 0, extraCosts: [], sellPrice: sell },
     ];
-    setProductos(next); saveProductos(next);
+    setProductos(next); saveProductosCosto(next);
     setProdForm(EMPTY_PROD);
     setShowAddProd(false);
   }
@@ -549,17 +508,14 @@ export const AdminPrecios: React.FC = () => {
   const updateProducto = useCallback((updated: ProductoCosto) => {
     setProductos(prev => {
       const next = prev.map(p => p.id === updated.id ? updated : p);
-      saveProductos(next);
+      saveProductosCosto(next);
       return next;
     });
   }, []);
 
   const deleteProducto = useCallback((id: string) => {
-    setProductos(prev => {
-      const next = prev.filter(p => p.id !== id);
-      saveProductos(next);
-      return next;
-    });
+    setProductos(prev => prev.filter(p => p.id !== id));
+    deleteProductoCosto(id);
   }, []);
 
   /* ── Preview formulario ── */

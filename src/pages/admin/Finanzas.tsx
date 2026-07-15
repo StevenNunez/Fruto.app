@@ -3,14 +3,9 @@ import { motion } from 'motion/react';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Activity, Package2, Scale, Leaf, PieChart as PieIcon, BarChart3 } from 'lucide-react';
 import { loadOrders, formatCLP } from '../../lib/orders';
 import { loadCosts } from '../../lib/costs';
+import { type GastoFijo, loadGastosFijos } from '../../lib/precios';
 import { CostEntry, CostCategory } from '../../types';
 import { cn } from '../../lib/utils';
-
-type GastoFijo = { id: string; name: string; amount: number; frecuencia: 'mensual' | 'anual' };
-
-function loadGastosFijosFromLS(): GastoFijo[] {
-  try { return JSON.parse(localStorage.getItem('fruto_gastos_fijos') ?? '[]'); } catch { return []; }
-}
 
 const CAT_COLOR: Record<CostCategory, string> = {
   Compra: '#2D6A4F', Transporte: '#F4820A', Empaque: '#3B82F6', Otro: '#A8A29E',
@@ -82,7 +77,7 @@ export const AdminFinanzas: React.FC = () => {
   useEffect(() => {
     loadOrders().then(setOrders as never);
     loadCosts().then(setCosts);
-    setGastosFijos(loadGastosFijosFromLS());
+    loadGastosFijos().then(setGastosFijos);
   }, []);
 
   const totalRevenue  = useMemo(() => orders.reduce((s, o) => s + o.total, 0), [orders]);

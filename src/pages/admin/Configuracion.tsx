@@ -1,17 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { type Config, DEFAULT_CONFIG, loadConfig, saveConfig } from '../../lib/config';
 
 export const AdminConfiguracion: React.FC = () => {
   const [config, setConfig] = useState<Config>(DEFAULT_CONFIG);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(false);
 
-  useEffect(() => { setConfig(loadConfig()); }, []);
+  useEffect(() => { loadConfig().then(setConfig); }, []);
 
-  const handleSave = () => {
-    saveConfig(config);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const handleSave = async () => {
+    setSaving(true);
+    setError(false);
+    try {
+      await saveConfig(config);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      console.error('saveConfig:', err);
+      setError(true);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const set = <K extends keyof Config>(key: K, value: Config[K]) =>
@@ -203,14 +214,21 @@ export const AdminConfiguracion: React.FC = () => {
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-full bg-brand-green px-8 py-3 text-sm font-semibold text-white transition hover:bg-[#245a42] active:scale-95"
+            disabled={saving}
+            className="rounded-full bg-brand-green px-8 py-3 text-sm font-semibold text-white transition hover:bg-[#245a42] active:scale-95 disabled:opacity-60"
           >
-            Guardar cambios
+            {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
           {saved && (
             <span className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600">
               <CheckCircle2 size={16} />
               ¡Guardado!
+            </span>
+          )}
+          {error && (
+            <span className="flex items-center gap-1.5 text-sm font-semibold text-red-600">
+              <AlertTriangle size={16} />
+              No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.
             </span>
           )}
         </div>

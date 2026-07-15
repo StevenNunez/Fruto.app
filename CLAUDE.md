@@ -37,9 +37,10 @@ El acceso a Supabase está centralizado en `src/lib/` (un archivo por tabla, con
 | Datos | Almacenamiento |
 |---|---|
 | products, categories, orders, costs, stock | Supabase (`src/lib/products.ts`, `orders.ts`, `costs.ts`, `stock.ts`) |
-| config (`fruto_config`), gastos fijos (`fruto_gastos_fijos`), costos por producto (`fruto_product_costs`), competidores (`fruto_competidores`), proveedores (`fruto_proveedores`), carrito (`fruto_cart`), último pedido (`fruto_last_order_id`, lo escribe Checkout y lo lee Confirmation) | localStorage (claves con prefijo `fruto_`) |
+| config (fila id=1, jsonb), gastos fijos y costos por producto (filas `{id, data jsonb}`) | Supabase (`src/lib/config.ts`, `src/lib/precios.ts`) — con puente de lectura desde la copia localStorage antigua mientras Supabase esté vacío |
+| competidores (`fruto_competidores`), proveedores (`fruto_proveedores`), carrito (`fruto_cart`), último pedido (`fruto_last_order_id`, lo escribe Checkout y lo lee Confirmation) | localStorage (claves con prefijo `fruto_`) |
 
-Ojo: `schema.sql` ya define las tablas `config`, `gastos_fijos` y `product_costs`, pero el código todavía las lee/escribe en localStorage — migración pendiente. Al tocar esos módulos, mantener la coherencia con lo que exista o completar la migración, no mezclar ambas fuentes.
+`DEFAULT_CONFIG` (en `config.ts`) debe mantenerse SIN datos reales del negocio (banco, WhatsApp, nombres): es el fallback que vería un cliente si falla la carga.
 
 ### Convenciones
 

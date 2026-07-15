@@ -63,18 +63,17 @@ create table if not exists stock (
   initial_stock numeric not null default 0
 );
 
--- Gastos fijos (módulo Precios)
+-- Gastos fijos (módulo Precios) — cada fila es un gasto, data jsonb
+-- con la forma {id, name, amount, frecuencia} (ver src/lib/precios.ts)
 create table if not exists gastos_fijos (
-  id        text primary key,
-  nombre    text not null,
-  monto     numeric not null default 0,
-  periodo   text not null default 'mensual'
+  id   text primary key,
+  data jsonb not null
 );
 
--- Costos por producto (módulo Precios)
+-- Costos por producto (módulo Precios) — cada fila es un producto, data
+-- jsonb con {id, name, purchaseCost, bulkUnit, bulkQty, sellUnit, merma,
+-- extraCosts, sellPrice} (ver src/lib/precios.ts)
 create table if not exists product_costs (
-  product_id text primary key,
-  costo_kg   numeric not null default 0,
-  merma      numeric not null default 0,
-  margen     numeric not null default 30
+  id   text primary key,
+  data jsonb not null
 );

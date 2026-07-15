@@ -4,7 +4,7 @@ import { CheckCircle2, Package, Truck, Home, MessageCircle, Clock } from 'lucide
 import { motion } from 'motion/react';
 import { Order } from '../types';
 import { cn } from '../lib/utils';
-import { loadConfig } from '../lib/config';
+import { loadConfig, DEFAULT_CONFIG } from '../lib/config';
 import { loadOrderById, shortOrderId } from '../lib/orders';
 
 const STEPS: { key: Order['status']; label: string; Icon: React.ElementType; msg: string }[] = [
@@ -15,7 +15,8 @@ const STEPS: { key: Order['status']; label: string; Icon: React.ElementType; msg
 ];
 
 export const Confirmation: React.FC = () => {
-  const [config] = useState(loadConfig);
+  const [config, setConfig] = useState(DEFAULT_CONFIG);
+  useEffect(() => { loadConfig().then(setConfig); }, []);
   const location = useLocation();
   const orderId: string | null =
     (location.state as { orderId?: string } | null)?.orderId ??
@@ -131,22 +132,32 @@ export const Confirmation: React.FC = () => {
           {order?.paymentMethod === 'Transferencia' && (
             <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5">
               <p className="text-xs font-bold text-amber-800">Datos para transferencia</p>
-              <div className="mt-2 space-y-1 text-xs text-amber-700">
-                <p>{config.bankName} · RUT: {config.bankRut}</p>
-                <p>Nombre: {config.bankAccountName}</p>
-                <p className="font-bold">Monto: ${order.total.toLocaleString('es-CL')}</p>
-              </div>
-              <p className="mt-2 text-[10px] text-amber-600">Envía el comprobante por WhatsApp para confirmar tu pedido.</p>
+              {config.bankName && config.bankRut ? (
+                <>
+                  <div className="mt-2 space-y-1 text-xs text-amber-700">
+                    <p>{config.bankName} · RUT: {config.bankRut}</p>
+                    <p>Nombre: {config.bankAccountName}</p>
+                    <p className="font-bold">Monto: ${order.total.toLocaleString('es-CL')}</p>
+                  </div>
+                  <p className="mt-2 text-[10px] text-amber-600">Envía el comprobante por WhatsApp para confirmar tu pedido.</p>
+                </>
+              ) : (
+                <p className="mt-2 text-xs text-amber-700">
+                  Te enviaremos los datos de transferencia por WhatsApp para confirmar tu pedido.
+                </p>
+              )}
             </div>
           )}
 
           {/* Actions */}
           <div className="flex flex-col gap-3">
-            <a href={`https://wa.me/${config.whatsapp}`} target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 rounded-2xl border border-[#25D366] bg-white py-4 font-bold text-[#25D366] transition hover:bg-[#25D366]/5 active:scale-95">
-              <MessageCircle size={18} />
-              Consultar por WhatsApp
-            </a>
+            {config.whatsapp && (
+              <a href={`https://wa.me/${config.whatsapp}`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 rounded-2xl border border-[#25D366] bg-white py-4 font-bold text-[#25D366] transition hover:bg-[#25D366]/5 active:scale-95">
+                <MessageCircle size={18} />
+                Consultar por WhatsApp
+              </a>
+            )}
             <Link to="/"
               className="flex items-center justify-center gap-2 rounded-2xl bg-stone-800 py-4 font-bold text-white transition hover:bg-stone-900 active:scale-95">
               Volver al inicio

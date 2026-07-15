@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Package, MapPin, BookOpen, Users, Leaf, BarChart2, Settings, Wallet, TrendingUp, Tag, Truck, Swords, LogOut } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { loadConfig } from '../../lib/config';
+import { loadConfig, DEFAULT_CONFIG } from '../../lib/config';
 import { signOut } from '../../lib/auth';
 
 function getInitials(name: string): string {
@@ -26,8 +26,10 @@ const NAV = [
 ];
 
 export const AdminLayout: React.FC = () => {
-  const [config] = useState(loadConfig);
-  const initials = getInitials(config.adminName);
+  const [config, setConfig] = useState(DEFAULT_CONFIG);
+  useEffect(() => { loadConfig().then(setConfig); }, []);
+  const adminName = config.adminName || 'Admin';
+  const initials = getInitials(adminName);
   const navigate = useNavigate();
   const handleSignOut = async () => {
     await signOut();
@@ -75,8 +77,8 @@ export const AdminLayout: React.FC = () => {
               {initials}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-stone-800">{config.adminName}</p>
-              <p className="truncate text-xs text-stone-500">Productor · La Serena</p>
+              <p className="truncate text-sm font-semibold text-stone-800">{adminName}</p>
+              <p className="truncate text-xs text-stone-500">{config.businessName}</p>
             </div>
             <button type="button" onClick={handleSignOut} title="Cerrar sesión"
               className="shrink-0 rounded-lg p-2 text-stone-400 transition hover:bg-stone-200/60 hover:text-stone-700">
