@@ -19,14 +19,14 @@ No hay tests configurados.
 ## Configuración
 
 - `.env` requiere `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (cliente en `src/lib/supabase.ts`); ver `.env.example`.
-- El schema de la base de datos está en `supabase/schema.sql` y se ejecuta manualmente en Supabase Dashboard → SQL Editor. Al agregar tablas o columnas hay que actualizar ese archivo y avisarle al usuario que lo ejecute.
+- El schema de la base de datos está en `supabase/schema.sql` y la seguridad (RLS, tabla `admins`, RPCs `get_order`/`stock_remaining`) en `supabase/policies.sql`; ambos se ejecutan manualmente en Supabase Dashboard → SQL Editor. Al agregar tablas o columnas hay que actualizar esos archivos y avisarle al usuario que los ejecute. Toda tabla nueva DEBE nacer con RLS y políticas.
 
 ## Arquitectura
 
 Dos áreas montadas en `src/App.tsx`:
 
 - **Tienda** (`/`, con `Layout`): Home, Catalog, Cart, Checkout, Confirmation. El carrito vive en `src/context/CartContext.tsx`.
-- **Admin** (`/admin`, con `AdminLayout`): páginas en `src/pages/admin/` (Pedidos, Ruta, Catalogo, Clientes, Cosechas, Reportes, Configuracion, Costos, Finanzas, Precios, Proveedores, Competencia). No tiene autenticación.
+- **Admin** (`/admin`, con `AdminLayout` envuelto en `RequireAuth`): páginas en `src/pages/admin/` (Pedidos, Ruta, Catalogo, Clientes, Cosechas, Reportes, Configuracion, Costos, Finanzas, Precios, Proveedores, Competencia). Login en `/admin/login` con Supabase Auth (`src/lib/auth.ts`); ser admin = estar en la tabla `admins` (no basta estar autenticado — ver `supabase/policies.sql`).
 
 ### Capa de datos — dividida entre Supabase y localStorage
 
