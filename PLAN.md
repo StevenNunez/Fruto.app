@@ -58,17 +58,23 @@ Se necesita un backend mínimo porque el Access Token de MP es secreto. Recomend
 
 ## Fase 3 — Frontend, renderizado y UX móvil
 
-- [ ] **Estados de carga**: Home/Catalog muestran vacío mientras cargan (grave en móvil con red lenta). Agregar skeletons de ProductCard y estado de error con reintentar.
-- [ ] **Imágenes**: `loading="lazy"` + `decoding="async"` en `ProductCard`; las imágenes son URLs externas — a mediano plazo subirlas a Supabase Storage con tamaños optimizados.
-- [ ] **Fuente**: quitar el `@import` de Google Fonts en `index.css` (bloquea render); usar `<link rel="preconnect">` + `<link>` en `index.html`, o self-host con `font-display: swap`.
-- [ ] Deduplicar `computeStockRemaining` (se hace en Fase 1 con el RPC).
-- [ ] **Code-splitting del admin**: el bundle actual pesa ~827 kB porque todo `/admin` se descarga junto con la tienda. Cargar las páginas admin con `React.lazy()` para que el cliente móvil solo baje la tienda.
-- [ ] Confirmation: detener el polling de 10s cuando el pedido llega a "Entregado" y cuando la pestaña está oculta (`document.visibilityState`).
-- [ ] Checkout móvil: el resumen del pedido queda abajo en pantallas chicas — agregar barra fija inferior con total + botón confirmar (patrón mobile-first).
-- [ ] Validar teléfono chileno en checkout (formato +56 9) — es el único canal de contacto con el cliente.
-- [ ] Bloquear checkout de productos sin stock (hoy se puede pedir algo agotado si ya estaba en el carrito).
+- [x] **Estados de carga**: Home/Catalog muestran skeletons (`ProductSkeleton.tsx`) mientras cargan y `LoadError.tsx` con botón "Reintentar" si falla la carga.
+- [x] **Imágenes**: `loading="lazy"` + `decoding="async"` en `ProductCard` y en las tarjetas del carrito.
+- [x] **Fuente**: quitado el `@import` de Google Fonts en `index.css`; ahora `<link rel="preconnect">` + `<link>` en `index.html`.
+- [x] Deduplicar `computeStockRemaining` (hecho en Fase 1 con el RPC).
+- [ ] **Code-splitting del admin**: el bundle sigue ~848 kB porque todo `/admin` se descarga junto con la tienda. Cargar las páginas admin con `React.lazy()` para que el cliente móvil solo baje la tienda.
+- [x] Confirmation: el polling de 10s se detiene cuando el pedido llega a "Entregado" y se pausa cuando la pestaña está oculta (`document.visibilityState`).
+- [x] Checkout móvil: barra fija inferior con total + botón confirmar.
+- [x] Validar teléfono chileno en checkout (`src/lib/phone.ts`, formato +56 9).
+- [x] Bloquear checkout de productos sin stock: `Cart.tsx`/`Checkout.tsx` comparan contra `loadStockRemaining()` y revalidan el stock justo antes de enviar el pedido.
 - [ ] PWA básica: `manifest.json` + iconos para "Agregar a pantalla de inicio" (opcional pero barato y valioso siendo mobile-first).
-- [ ] Accesibilidad mínima: textos `text-[10px]`/`text-[9px]` son muy chicos para tocar/leer en móvil; revisar áreas táctiles ≥44px en botones +/- del ProductCard.
+- [x] Accesibilidad mínima: botones y campos con área táctil ≥44px (`min-h-11`/`h-10`) en ProductCard, Cart y Checkout.
+
+### Extra (no estaba en el plan original): modo de entrega "Hoy" vs "Mañana"
+
+Se agregó una funcionalidad nueva de negocio junto con lo de arriba: el cliente elige en el checkout si quiere el pedido **mañana** (planificado, envío gratis sobre el umbral configurado) o **hoy** (urgente, siempre paga despacho, con ventana horaria a elegir). Afecta `Cart.tsx`, `Checkout.tsx`, `Confirmation.tsx`, admin `Pedidos.tsx`/`Ruta.tsx`/`Configuracion.tsx`, `types.ts`, `config.ts` y el schema de `orders` (`delivery_mode`, `delivery_slot`).
+
+⚠️ **PENDIENTE: ejecutar `supabase/migracion-delivery.sql` en el SQL Editor de Supabase** para agregar esas dos columnas a la tabla `orders` ya existente (mismo patrón que las migraciones anteriores — es seguro re-ejecutarlo).
 
 ## Fase 4 — Cuentas de cliente (opcionales)
 

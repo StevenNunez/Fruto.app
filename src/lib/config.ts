@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Sector } from '../types';
+import type { DeliveryMode, Sector } from '../types';
 
 export type Config = {
   businessName: string;
@@ -10,12 +10,53 @@ export type Config = {
   bankAccountName: string;
   cutoffTime: string;
   deliveryTime: string;
+  /** Texto de la ventana para pedidos "mañana" (planificados). */
   deliveryWindow: string;
+  /** Costo de despacho: se cobra siempre en "hoy", y en "mañana" si no llega al umbral. */
   deliveryFee: number;
+  /** Envío gratis solo aplica a pedidos para MAÑANA sobre este monto. */
   freeDeliveryThreshold: number;
   sectors: { la_serena: boolean; coquimbo: boolean; las_companias: boolean };
   paymentMethods: { mercadopago: boolean; transferencia: boolean };
 };
+
+/** Ventanas para entrega el mismo día (urgentes). */
+export const EXPRESS_DELIVERY_SLOTS = [
+  'Lo antes posible',
+  '10:00–12:00',
+  '12:00–14:00',
+  '14:00–16:00',
+  '16:00–18:00',
+  '18:00–20:00',
+] as const;
+
+/**
+ * Mañana: gratis si subtotal ≥ umbral; si no, cobra deliveryFee.
+ * Hoy (urgente): siempre cobra deliveryFee (la urgencia tiene valor).
+ */
+export function computeDeliveryFee(
+  subtotal: number,
+  mode: DeliveryMode,
+  config: Pick<Config, 'deliveryFee' | 'freeDeliveryThreshold'>
+): number {
+  if (mode === 'hoy') return config.deliveryFee;
+  return subtotal >= config.freeDeliveryThreshold ? 0 : config.deliveryFee;
+}
+
+export function deliveryModeLabel(mode: DeliveryMode): string {
+  return mode === 'hoy' ? 'Hoy' : 'Mañana';
+}
+
+export function deliverySummary(
+  mode: DeliveryMode,
+  slot: string | undefined,
+  config: Pick<Config, 'deliveryWindow'>
+): string {
+  if (mode === 'hoy') {
+    return slot ? `Hoy · ${slot}` : 'Hoy';
+  }
+  return `Mañana · ${config.deliveryWindow}`;
+}
 
 // Valores neutros de respaldo. Los datos reales del negocio viven en
 // Supabase (tabla config, fila id=1) y se editan en /admin/configuracion.
@@ -45,6 +86,17 @@ const SECTOR_MAP: { key: keyof Config['sectors']; label: Sector }[] = [
 
 export function getActiveSectors(sectors: Config['sectors']): Sector[] {
   return SECTOR_MAP.filter((s) => sectors[s.key]).map((s) => s.label);
+}
+
+/** "15:00" → "3 PM"; "15:30" → "3:30 PM" (para textos de la tienda). */
+export function formatCutoffLabel(cutoffTime: string): string {
+  const [hStr, mStr] = cutoffTime.split(':');
+  const h = Number(hStr);
+  const m = Number(mStr ?? '0');
+  if (Number.isNaN(h)) return cutoffTime;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return m === 0 ? `${h12} ${period}` : `${h12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
 // Copia antigua en localStorage (solo existe en el navegador del

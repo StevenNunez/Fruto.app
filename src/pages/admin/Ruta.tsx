@@ -3,6 +3,7 @@ import { MapPin } from 'lucide-react';
 import { Order, OrderStatus, Sector } from '../../types';
 import { loadOrders, formatCLP, shortOrderId } from '../../lib/orders';
 import { cn } from '../../lib/utils';
+import { deliveryModeLabel } from '../../lib/config';
 
 const STATUS_DOT: Record<OrderStatus, string> = {
   Pendiente: 'bg-orange-400',
@@ -82,6 +83,18 @@ export const AdminRuta: React.FC = () => {
                           <span className="text-xs font-bold text-stone-500">#{shortOrderId(order.id)}</span>
                           <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[order.status])} />
                           <span className="text-[10px] font-semibold uppercase text-stone-500">{order.status}</span>
+                          <span
+                            className={cn(
+                              'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase',
+                              order.deliveryMode === 'hoy'
+                                ? 'bg-orange-100 text-orange-700'
+                                : 'bg-emerald-100 text-emerald-800'
+                            )}
+                          >
+                            {order.deliveryMode === 'hoy'
+                              ? `Hoy${order.deliverySlot ? ` · ${order.deliverySlot}` : ''}`
+                              : deliveryModeLabel('manana')}
+                          </span>
                         </div>
                         <p className="mt-0.5 font-semibold text-stone-800">{order.customerName}</p>
                         <p className="flex items-center gap-1 text-sm text-stone-500">

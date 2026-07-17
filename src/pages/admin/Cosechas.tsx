@@ -98,7 +98,7 @@ export const AdminCosechas: React.FC = () => {
   const [ingresoVal, setIngresoVal] = useState('');
 
   useEffect(() => {
-    loadProducts().then(setProducts);
+    loadProducts().then(setProducts).catch(() => setProducts([]));
     loadOrders().then(setOrders);
     loadStockInit().then(setStockInit);
   }, []);

@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { supabase } from './supabase';
-import { Order } from '../types';
+import { DeliveryMode, Order } from '../types';
 
 type DbOrder = {
   id: string;
@@ -14,7 +14,13 @@ type DbOrder = {
   payment_method: string;
   notes: string | null;
   created_at: string;
+  delivery_mode: string | null;
+  delivery_slot: string | null;
 };
+
+function mapDeliveryMode(raw: string | null | undefined): DeliveryMode {
+  return raw === 'hoy' ? 'hoy' : 'manana';
+}
 
 function mapOrder(row: DbOrder): Order {
   return {
@@ -29,6 +35,8 @@ function mapOrder(row: DbOrder): Order {
     paymentMethod: row.payment_method as Order['paymentMethod'],
     notes: row.notes ?? undefined,
     createdAt: row.created_at,
+    deliveryMode: mapDeliveryMode(row.delivery_mode),
+    deliverySlot: row.delivery_slot ?? undefined,
   };
 }
 
@@ -45,6 +53,8 @@ function toDb(o: Order): DbOrder {
     payment_method: o.paymentMethod,
     notes: o.notes ?? null,
     created_at: o.createdAt,
+    delivery_mode: o.deliveryMode,
+    delivery_slot: o.deliverySlot ?? null,
   };
 }
 
@@ -53,7 +63,10 @@ export async function loadOrders(): Promise<Order[]> {
     .from('orders')
     .select('*')
     .order('created_at', { ascending: false });
-  if (error) { console.error('loadOrders:', error.message); return []; }
+  if (error) {
+    console.error('loadOrders:', error.message);
+    return [];
+  }
   return (data as DbOrder[]).map(mapOrder);
 }
 
@@ -61,7 +74,10 @@ export async function loadOrders(): Promise<Order[]> {
 // puede hacer SELECT sobre orders, pero sí ver SU pedido conociendo el id.
 export async function loadOrderById(id: string): Promise<Order | null> {
   const { data, error } = await supabase.rpc('get_order', { order_id: id });
-  if (error) { console.error('get_order:', error.message); return null; }
+  if (error) {
+    console.error('get_order:', error.message);
+    return null;
+  }
   const row = (data as DbOrder[] | null)?.[0];
   return row ? mapOrder(row) : null;
 }

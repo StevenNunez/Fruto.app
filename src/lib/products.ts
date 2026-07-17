@@ -46,7 +46,10 @@ function toDb(p: Product): DbProduct {
 
 export async function loadProducts(): Promise<Product[]> {
   const { data, error } = await supabase.from('products').select('*').order('name');
-  if (error) { console.error('loadProducts:', error.message); return []; }
+  if (error) {
+    console.error('loadProducts:', error.message);
+    throw new Error(error.message);
+  }
   return (data as DbProduct[]).map(mapProduct);
 }
 

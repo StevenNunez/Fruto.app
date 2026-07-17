@@ -106,10 +106,10 @@ export const AdminConfiguracion: React.FC = () => {
           </div>
         </Section>
 
-        {/* Horarios */}
-        <Section title="Horarios">
+        {/* Horarios — aplica a pedidos "Mañana" (planificados) */}
+        <Section title="Entrega mañana (planificada)">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Cierre de pedidos">
+            <Field label="Cierre de pedidos del día">
               <input
                 type="time"
                 value={config.cutoffTime}
@@ -127,20 +127,20 @@ export const AdminConfiguracion: React.FC = () => {
             </Field>
           </div>
           <div className="mt-4">
-            <Field label="Ventana de entrega (texto visible al cliente)">
+            <Field label="Ventana de entrega mañana (texto al cliente)">
               <input
                 type="text"
                 value={config.deliveryWindow}
                 onChange={(e) => set('deliveryWindow', e.target.value)}
                 className="input-field"
-                placeholder="ej: 7:00 – 10:00 PM"
+                placeholder="ej: 10:00 – 14:00"
               />
             </Field>
           </div>
         </Section>
 
         {/* Despacho */}
-        <Section title="Despacho">
+        <Section title="Despacho (hoy vs mañana)">
           <div className="grid grid-cols-2 gap-4">
             <Field label="Costo de despacho (CLP)">
               <input
@@ -152,7 +152,7 @@ export const AdminConfiguracion: React.FC = () => {
                 className="input-field"
               />
             </Field>
-            <Field label="Mínimo para envío gratis (CLP)">
+            <Field label="Mínimo envío gratis mañana (CLP)">
               <input
                 type="number"
                 min={0}
@@ -163,9 +163,17 @@ export const AdminConfiguracion: React.FC = () => {
               />
             </Field>
           </div>
-          <p className="mt-2 text-xs text-stone-400">
-            Pedidos sobre ${config.freeDeliveryThreshold.toLocaleString('es-CL')} no pagan despacho.
-          </p>
+          <ul className="mt-3 space-y-1 text-xs text-stone-500">
+            <li>
+              · <strong>Mañana</strong>: envío gratis solo si el pedido llega a $
+              {config.freeDeliveryThreshold.toLocaleString('es-CL')}. Si no, cobra $
+              {config.deliveryFee.toLocaleString('es-CL')}.
+            </li>
+            <li>
+              · <strong>Hoy (urgente)</strong>: siempre cobra $
+              {config.deliveryFee.toLocaleString('es-CL')} (cubre courier / PedidosYa / etc.).
+            </li>
+          </ul>
         </Section>
 
         {/* Cobertura */}

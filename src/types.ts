@@ -18,6 +18,9 @@ export type CartItem = Product & {
 
 export type OrderStatus = 'Pendiente' | 'Preparando' | 'En camino' | 'Entregado';
 
+/** Mañana = planificado (envío gratis sobre umbral). Hoy = urgente (siempre paga despacho). */
+export type DeliveryMode = 'manana' | 'hoy';
+
 export type Sector = 'La Serena' | 'Coquimbo' | 'Las Compañías';
 
 export type CostCategory = 'Compra' | 'Transporte' | 'Empaque' | 'Otro';
@@ -84,4 +87,8 @@ export type Order = {
   createdAt: string;
   paymentMethod: 'MercadoPago' | 'Transferencia';
   notes?: string;
+  /** Por defecto 'manana' en pedidos antiguos sin el campo. */
+  deliveryMode: DeliveryMode;
+  /** Ventana horaria solo para entrega hoy (ej. "12:00–14:00"). */
+  deliverySlot?: string;
 };

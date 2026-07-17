@@ -26,6 +26,8 @@ insert into categories (name) values
 on conflict do nothing;
 
 -- Pedidos
+-- delivery_mode: 'manana' (planificado, envío gratis sobre umbral) | 'hoy' (urgente, siempre paga despacho)
+-- delivery_slot: ventana horaria preferida solo para 'hoy' (ej. "12:00–14:00")
 create table if not exists orders (
   id               text primary key,
   customer_name    text not null,
@@ -37,6 +39,8 @@ create table if not exists orders (
   status           text not null default 'Pendiente',
   payment_method   text not null,
   notes            text,
+  delivery_mode    text not null default 'manana',
+  delivery_slot    text,
   created_at       timestamptz not null default now()
 );
 

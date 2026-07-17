@@ -21,11 +21,16 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
 
 const SECTORS: (Sector | 'Todos')[] = ['Todos', 'La Serena', 'Coquimbo', 'Las Compañías'];
 
+function deliveryLabel(o: Order): string {
+  if (o.deliveryMode === 'hoy') return o.deliverySlot ? `Hoy · ${o.deliverySlot}` : 'Hoy';
+  return 'Mañana';
+}
+
 function exportRoute(orders: Order[]) {
   const active = orders.filter((o) => o.status !== 'Entregado');
-  const headers = ['ID', 'Cliente', 'Dirección', 'Sector', 'Estado', 'Productos', 'Total', 'Pago', 'Notas'];
+  const headers = ['ID', 'Cliente', 'Dirección', 'Sector', 'Entrega', 'Estado', 'Productos', 'Total', 'Pago', 'Notas'];
   const rows = active.map((o) => [
-    shortOrderId(o.id), o.customerName, o.customerAddress, o.customerSector, o.status,
+    shortOrderId(o.id), o.customerName, o.customerAddress, o.customerSector, deliveryLabel(o), o.status,
     o.items.map((i) => `${i.quantity}x ${i.name}`).join(' / '),
     formatCLP(o.total), o.paymentMethod, o.notes ?? '',
   ]);
@@ -276,6 +281,16 @@ function OrderCard({ order, onAdvance, onStatusChange }: {
       </div>
       <p className="font-semibold text-stone-800">{order.customerName}</p>
       <p className="mt-0.5 text-xs text-stone-500">{order.customerSector} · {order.items.length} items</p>
+      <span
+        className={cn(
+          'mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+          order.deliveryMode === 'hoy'
+            ? 'bg-orange-100 text-orange-700'
+            : 'bg-emerald-100 text-emerald-800'
+        )}
+      >
+        {deliveryLabel(order)}
+      </span>
       <div className="mt-2 space-y-0.5">
         {order.items.map((item) => (
           <p key={item.id} className="text-[11px] text-stone-400">
@@ -315,7 +330,12 @@ function ListOrderRow({ order, onAdvance, onStatusChange }: {
             <StatusBadge status={order.status} />
           </div>
           <p className="mt-1 font-semibold text-stone-800">{order.customerName}</p>
-          <p className="text-xs text-stone-500">{order.customerSector} · {order.items.length} items · {order.paymentMethod}</p>
+          <p className="text-xs text-stone-500">
+            {order.customerSector} · {order.items.length} items · {order.paymentMethod} ·{' '}
+            <span className={order.deliveryMode === 'hoy' ? 'font-semibold text-orange-600' : 'font-semibold text-emerald-700'}>
+              {deliveryLabel(order)}
+            </span>
+          </p>
           {order.notes && <p className="mt-1 text-xs text-amber-800">{order.notes}</p>}
         </div>
         <div className="flex items-center gap-3">

@@ -17,13 +17,24 @@ export async function loadStockInit(): Promise<StockInit> {
 // security definer) para no exponer los pedidos al público.
 export async function loadStockRemaining(): Promise<Record<string, number>> {
   const { data, error } = await supabase.rpc('stock_remaining');
-  if (error || !data) {
-    if (error) console.error('stock_remaining:', error.message);
-    return {};
+  if (error) {
+    console.error('stock_remaining:', error.message);
+    throw new Error(error.message);
   }
+  if (!data) return {};
   return Object.fromEntries(
     (data as { product_id: string; remaining: number }[]).map((r) => [r.product_id, r.remaining])
   );
+}
+
+/** true si la cantidad pedida supera el stock restante (si no hay dato de stock, no bloquea). */
+export function exceedsStock(
+  productId: string,
+  quantity: number,
+  stockRemaining: Record<string, number>
+): boolean {
+  if (!(productId in stockRemaining)) return false;
+  return quantity > stockRemaining[productId];
 }
 
 export async function setStock(productId: string, initialStock: number): Promise<void> {

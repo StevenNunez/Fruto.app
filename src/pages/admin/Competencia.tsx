@@ -4,7 +4,7 @@ import {
   ChevronDown, Zap, TrendingDown, TrendingUp, Minus,
   ShoppingCart, Store,
 } from 'lucide-react';
-import { Competidor, CompetidorProducto, TipoCompetidor } from '../../types';
+import { Competidor, CompetidorProducto, Product, TipoCompetidor } from '../../types';
 import { loadProducts } from '../../lib/products';
 import { formatCLP } from '../../lib/orders';
 import { cn } from '../../lib/utils';
@@ -324,9 +324,12 @@ export const AdminCompetencia: React.FC = () => {
   const [comparaSearch, setComparaSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  useEffect(() => { setCompetidores(loadCompetidores()); }, []);
+  const [misProductos, setMisProductos] = useState<Product[]>([]);
 
-  const misProductos = useMemo(() => loadProducts(), []);
+  useEffect(() => {
+    setCompetidores(loadCompetidores());
+    loadProducts().then(setMisProductos).catch(() => setMisProductos([]));
+  }, []);
 
   // All product names that appear in any competitor, for quick-pick chips
   const allCompetitorProductNames = useMemo(() => {

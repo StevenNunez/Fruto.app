@@ -34,7 +34,7 @@ export const AdminCatalogo: React.FC = () => {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    loadProducts().then(setProducts);
+    loadProducts().then(setProducts).catch(() => setProducts([]));
     loadCategories().then(setCategories);
   }, []);
 
