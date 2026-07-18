@@ -18,6 +18,9 @@ export type CartItem = Product & {
 
 export type OrderStatus = 'Pendiente' | 'Preparando' | 'En camino' | 'Entregado';
 
+/** pendiente_pago: recién creado, esperando confirmación de MP. pendiente_transferencia: pedido por transferencia, esperando comprobante. */
+export type PaymentStatus = 'pendiente_pago' | 'pagado' | 'pendiente_transferencia' | 'rechazado';
+
 /** Mañana = planificado (envío gratis sobre umbral). Hoy = urgente (siempre paga despacho). */
 export type DeliveryMode = 'manana' | 'hoy';
 
@@ -91,4 +94,9 @@ export type Order = {
   deliveryMode: DeliveryMode;
   /** Ventana horaria solo para entrega hoy (ej. "12:00–14:00"). */
   deliverySlot?: string;
+  paymentStatus: PaymentStatus;
+  /** id de la preferencia de pago en Mercado Pago (solo paymentMethod = 'MercadoPago'). */
+  mpPreferenceId?: string;
+  /** id del pago confirmado por el webhook de Mercado Pago. */
+  mpPaymentId?: string;
 };

@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { supabase } from './supabase';
-import { DeliveryMode, Order } from '../types';
+import { DeliveryMode, Order, PaymentStatus } from '../types';
 
 type DbOrder = {
   id: string;
@@ -16,10 +16,24 @@ type DbOrder = {
   created_at: string;
   delivery_mode: string | null;
   delivery_slot: string | null;
+  payment_status: string | null;
+  mp_preference_id: string | null;
+  mp_payment_id: string | null;
 };
 
 function mapDeliveryMode(raw: string | null | undefined): DeliveryMode {
   return raw === 'hoy' ? 'hoy' : 'manana';
+}
+
+const PAYMENT_STATUSES: PaymentStatus[] = [
+  'pendiente_pago',
+  'pagado',
+  'pendiente_transferencia',
+  'rechazado',
+];
+
+function mapPaymentStatus(raw: string | null | undefined): PaymentStatus {
+  return PAYMENT_STATUSES.includes(raw as PaymentStatus) ? (raw as PaymentStatus) : 'pendiente_pago';
 }
 
 function mapOrder(row: DbOrder): Order {
@@ -37,6 +51,9 @@ function mapOrder(row: DbOrder): Order {
     createdAt: row.created_at,
     deliveryMode: mapDeliveryMode(row.delivery_mode),
     deliverySlot: row.delivery_slot ?? undefined,
+    paymentStatus: mapPaymentStatus(row.payment_status),
+    mpPreferenceId: row.mp_preference_id ?? undefined,
+    mpPaymentId: row.mp_payment_id ?? undefined,
   };
 }
 
@@ -55,6 +72,9 @@ function toDb(o: Order): DbOrder {
     created_at: o.createdAt,
     delivery_mode: o.deliveryMode,
     delivery_slot: o.deliverySlot ?? null,
+    payment_status: o.paymentStatus,
+    mp_preference_id: o.mpPreferenceId ?? null,
+    mp_payment_id: o.mpPaymentId ?? null,
   };
 }
 
@@ -89,6 +109,14 @@ export async function createOrder(order: Order): Promise<void> {
 
 export async function updateOrderStatus(id: string, status: Order['status']): Promise<void> {
   const { error } = await supabase.from('orders').update({ status }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// Para transferencias: el admin marca manualmente cuando recibe el
+// comprobante (por WhatsApp). Los pagos con MercadoPago los actualiza
+// solo el webhook de /api/mp-webhook, nunca el navegador del cliente.
+export async function updatePaymentStatus(id: string, paymentStatus: PaymentStatus): Promise<void> {
+  const { error } = await supabase.from('orders').update({ payment_status: paymentStatus }).eq('id', id);
   if (error) throw new Error(error.message);
 }
 

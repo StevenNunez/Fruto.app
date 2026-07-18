@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, Link, Navigate } from 'react-router-dom';
-import { CheckCircle2, Package, Truck, Home, MessageCircle, Clock } from 'lucide-react';
+import { useLocation, useSearchParams, Link, Navigate } from 'react-router-dom';
+import { CheckCircle2, Package, Truck, Home, MessageCircle, Clock, CreditCard, XCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Order } from '../types';
 import { cn } from '../lib/utils';
@@ -40,8 +40,12 @@ export const Confirmation: React.FC = () => {
     loadConfig().then(setConfig);
   }, []);
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  // Mercado Pago vuelve a esta página con "?order=<id>" (sin state de router,
+  // porque es una navegación externa, no un Link interno).
   const orderId: string | null =
     (location.state as { orderId?: string } | null)?.orderId ??
+    searchParams.get('order') ??
     localStorage.getItem('fruto_last_order_id');
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -220,6 +224,52 @@ export const Confirmation: React.FC = () => {
           ) : (
             <div className="rounded-3xl border border-stone-100 bg-stone-50 p-5 text-center text-sm text-stone-400">
               Cargando detalles del pedido...
+            </div>
+          )}
+
+          {order?.paymentMethod === 'MercadoPago' && (
+            <div
+              className={cn(
+                'rounded-3xl border p-5',
+                order.paymentStatus === 'pagado'
+                  ? 'border-brand-green/20 bg-brand-green/5'
+                  : order.paymentStatus === 'rechazado'
+                    ? 'border-red-200 bg-red-50'
+                    : 'border-amber-200 bg-amber-50'
+              )}
+            >
+              <div className="flex items-center gap-2">
+                {order.paymentStatus === 'pagado' ? (
+                  <CheckCircle2 size={16} className="shrink-0 text-brand-green" />
+                ) : order.paymentStatus === 'rechazado' ? (
+                  <XCircle size={16} className="shrink-0 text-red-500" />
+                ) : (
+                  <CreditCard size={16} className="shrink-0 text-amber-600" />
+                )}
+                <p
+                  className={cn(
+                    'text-sm font-bold',
+                    order.paymentStatus === 'pagado'
+                      ? 'text-brand-green'
+                      : order.paymentStatus === 'rechazado'
+                        ? 'text-red-700'
+                        : 'text-amber-800'
+                  )}
+                >
+                  {order.paymentStatus === 'pagado'
+                    ? 'Pago aprobado'
+                    : order.paymentStatus === 'rechazado'
+                      ? 'Pago rechazado'
+                      : 'Confirmando tu pago...'}
+                </p>
+              </div>
+              <p className="mt-1.5 text-xs text-stone-500">
+                {order.paymentStatus === 'pagado'
+                  ? 'Ya recibimos tu pago, gracias.'
+                  : order.paymentStatus === 'rechazado'
+                    ? 'Mercado Pago rechazó el pago. Escríbenos por WhatsApp para intentar de nuevo.'
+                    : 'Esto se actualiza solo apenas Mercado Pago nos confirme el pago (unos segundos).'}
+              </p>
             </div>
           )}
 

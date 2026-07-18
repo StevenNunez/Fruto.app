@@ -28,6 +28,7 @@ on conflict do nothing;
 -- Pedidos
 -- delivery_mode: 'manana' (planificado, envío gratis sobre umbral) | 'hoy' (urgente, siempre paga despacho)
 -- delivery_slot: ventana horaria preferida solo para 'hoy' (ej. "12:00–14:00")
+-- payment_status: pendiente_pago | pagado | pendiente_transferencia | rechazado
 create table if not exists orders (
   id               text primary key,
   customer_name    text not null,
@@ -41,6 +42,9 @@ create table if not exists orders (
   notes            text,
   delivery_mode    text not null default 'manana',
   delivery_slot    text,
+  payment_status   text not null default 'pendiente_pago',
+  mp_preference_id text,
+  mp_payment_id    text,
   created_at       timestamptz not null default now()
 );
 

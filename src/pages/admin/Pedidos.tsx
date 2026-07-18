@@ -1,8 +1,24 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Download, CheckCircle2, X, Truck } from 'lucide-react';
-import { Order, OrderStatus, Sector } from '../../types';
+import { Order, OrderStatus, PaymentStatus, Sector } from '../../types';
 import { cn } from '../../lib/utils';
-import { loadOrders, updateOrderStatus, formatCLP, shortOrderId } from '../../lib/orders';
+import { loadOrders, updateOrderStatus, updatePaymentStatus, formatCLP, shortOrderId } from '../../lib/orders';
+
+const PAYMENT_STATUS_META: Record<PaymentStatus, { label: string; className: string }> = {
+  pagado: { label: 'Pagado', className: 'bg-emerald-100 text-emerald-800' },
+  pendiente_pago: { label: 'Pago pendiente', className: 'bg-amber-100 text-amber-700' },
+  pendiente_transferencia: { label: 'Esperando transferencia', className: 'bg-amber-100 text-amber-700' },
+  rechazado: { label: 'Pago rechazado', className: 'bg-red-100 text-red-700' },
+};
+
+function PaymentBadge({ status }: { status: PaymentStatus }) {
+  const meta = PAYMENT_STATUS_META[status];
+  return (
+    <span className={cn('inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide', meta.className)}>
+      {meta.label}
+    </span>
+  );
+}
 
 const STATUSES: OrderStatus[] = ['Pendiente', 'Preparando', 'En camino', 'Entregado'];
 
@@ -56,6 +72,11 @@ export const AdminPedidos: React.FC = () => {
   const changeStatus = (orderId: string, status: OrderStatus) => {
     setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
     updateOrderStatus(orderId, status).catch(console.error);
+  };
+
+  const markTransferPaid = (orderId: string) => {
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, paymentStatus: 'pagado' } : o)));
+    updatePaymentStatus(orderId, 'pagado').catch(console.error);
   };
 
   const advanceOrder = (orderId: string) => {
@@ -160,7 +181,7 @@ export const AdminPedidos: React.FC = () => {
           {STATUSES.map((status) => (
             <div key={status}>
               <KanbanColumn status={status} orders={ordersByStatus[status]}
-                onAdvance={advanceOrder} onStatusChange={changeStatus} />
+                onAdvance={advanceOrder} onStatusChange={changeStatus} onMarkPaid={markTransferPaid} />
             </div>
           ))}
         </div>
@@ -171,7 +192,7 @@ export const AdminPedidos: React.FC = () => {
           ) : (
             filteredOrders.map((order) => (
               <div key={order.id}>
-                <ListOrderRow order={order} onAdvance={advanceOrder} onStatusChange={changeStatus} />
+                <ListOrderRow order={order} onAdvance={advanceOrder} onStatusChange={changeStatus} onMarkPaid={markTransferPaid} />
               </div>
             ))
           )}
@@ -236,9 +257,10 @@ function StatusBadge({ status }: { status: OrderStatus }) {
   );
 }
 
-function KanbanColumn({ status, orders, onAdvance, onStatusChange }: {
+function KanbanColumn({ status, orders, onAdvance, onStatusChange, onMarkPaid }: {
   status: OrderStatus; orders: Order[];
   onAdvance: (id: string) => void; onStatusChange: (id: string, status: OrderStatus) => void;
+  onMarkPaid: (id: string) => void;
 }) {
   const total = orders.reduce((s, o) => s + o.total, 0);
   const meta = STATUS_META[status];
@@ -260,7 +282,7 @@ function KanbanColumn({ status, orders, onAdvance, onStatusChange }: {
         ) : (
           orders.map((order) => (
             <div key={order.id}>
-              <OrderCard order={order} onAdvance={onAdvance} onStatusChange={onStatusChange} />
+              <OrderCard order={order} onAdvance={onAdvance} onStatusChange={onStatusChange} onMarkPaid={onMarkPaid} />
             </div>
           ))
         )}
@@ -269,8 +291,9 @@ function KanbanColumn({ status, orders, onAdvance, onStatusChange }: {
   );
 }
 
-function OrderCard({ order, onAdvance, onStatusChange }: {
+function OrderCard({ order, onAdvance, onStatusChange, onMarkPaid }: {
   order: Order; onAdvance: (id: string) => void; onStatusChange: (id: string, status: OrderStatus) => void;
+  onMarkPaid: (id: string) => void;
 }) {
   const canAdvance = order.status !== 'Entregado';
   return (
@@ -281,16 +304,19 @@ function OrderCard({ order, onAdvance, onStatusChange }: {
       </div>
       <p className="font-semibold text-stone-800">{order.customerName}</p>
       <p className="mt-0.5 text-xs text-stone-500">{order.customerSector} · {order.items.length} items</p>
-      <span
-        className={cn(
-          'mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-          order.deliveryMode === 'hoy'
-            ? 'bg-orange-100 text-orange-700'
-            : 'bg-emerald-100 text-emerald-800'
-        )}
-      >
-        {deliveryLabel(order)}
-      </span>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        <span
+          className={cn(
+            'inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+            order.deliveryMode === 'hoy'
+              ? 'bg-orange-100 text-orange-700'
+              : 'bg-emerald-100 text-emerald-800'
+          )}
+        >
+          {deliveryLabel(order)}
+        </span>
+        <PaymentBadge status={order.paymentStatus} />
+      </div>
       <div className="mt-2 space-y-0.5">
         {order.items.map((item) => (
           <p key={item.id} className="text-[11px] text-stone-400">
@@ -299,6 +325,15 @@ function OrderCard({ order, onAdvance, onStatusChange }: {
         ))}
       </div>
       {order.notes && <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900">{order.notes}</p>}
+      {order.paymentStatus === 'pendiente_transferencia' && (
+        <button
+          type="button"
+          onClick={() => onMarkPaid(order.id)}
+          className="mt-2.5 w-full rounded-lg bg-emerald-50 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+        >
+          Marcar transferencia recibida
+        </button>
+      )}
       <div className="mt-3 flex items-center justify-between border-t border-stone-100 pt-2.5">
         <span className="text-[11px] text-stone-400">{order.paymentMethod}</span>
         {canAdvance ? (
@@ -316,8 +351,9 @@ function OrderCard({ order, onAdvance, onStatusChange }: {
   );
 }
 
-function ListOrderRow({ order, onAdvance, onStatusChange }: {
+function ListOrderRow({ order, onAdvance, onStatusChange, onMarkPaid }: {
   order: Order; onAdvance: (id: string) => void; onStatusChange: (id: string, status: OrderStatus) => void;
+  onMarkPaid: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const canAdvance = order.status !== 'Entregado';
@@ -328,6 +364,7 @@ function ListOrderRow({ order, onAdvance, onStatusChange }: {
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-bold text-stone-800">#{shortOrderId(order.id)}</span>
             <StatusBadge status={order.status} />
+            <PaymentBadge status={order.paymentStatus} />
           </div>
           <p className="mt-1 font-semibold text-stone-800">{order.customerName}</p>
           <p className="text-xs text-stone-500">
@@ -337,6 +374,15 @@ function ListOrderRow({ order, onAdvance, onStatusChange }: {
             </span>
           </p>
           {order.notes && <p className="mt-1 text-xs text-amber-800">{order.notes}</p>}
+          {order.paymentStatus === 'pendiente_transferencia' && (
+            <button
+              type="button"
+              onClick={() => onMarkPaid(order.id)}
+              className="mt-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+            >
+              Marcar transferencia recibida
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => setExpanded((p) => !p)} className="text-xs font-medium text-stone-400 hover:text-stone-600">

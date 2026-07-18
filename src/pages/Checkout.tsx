@@ -136,21 +136,54 @@ export const Checkout: React.FC = () => {
       // Si falla el stock, igual intentamos crear el pedido.
     }
 
-    const orderId = crypto.randomUUID();
-    const order = {
-      id: orderId,
+    const deliveryPayload = {
       customerName: formData.name.trim(),
       customerAddress: formData.address.trim(),
       customerPhone: normalizeChileanMobile(formData.phone),
       customerSector: sector,
       notes: formData.notes.trim() || undefined,
+      deliveryMode,
+      deliverySlot: deliveryMode === 'hoy' ? deliverySlot : undefined,
+    };
+
+    // MercadoPago: el pedido y el total se crean en el servidor (nunca
+    // confiando en el navegador), que devuelve a dónde redirigir para pagar.
+    if (paymentMethod === 'MercadoPago') {
+      try {
+        const res = await fetch('/api/create-preference', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
+            ...deliveryPayload,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.initPoint) throw new Error(data.error ?? 'No se pudo iniciar el pago.');
+
+        localStorage.setItem('fruto_last_order_id', data.orderId);
+        submitted.current = true;
+        clearCart();
+        window.location.href = data.initPoint;
+      } catch (err) {
+        console.error('Error al iniciar el pago:', err);
+        setSubmitError(true);
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Transferencia: sin pasarela de pago, se crea el pedido directo.
+    const orderId = crypto.randomUUID();
+    const order = {
+      id: orderId,
+      ...deliveryPayload,
       paymentMethod,
       items,
       total: finalTotal,
       createdAt: new Date().toISOString(),
       status: 'Pendiente' as const,
-      deliveryMode,
-      deliverySlot: deliveryMode === 'hoy' ? deliverySlot : undefined,
+      paymentStatus: 'pendiente_transferencia' as const,
     };
     try {
       await createOrder(order);
@@ -211,12 +244,16 @@ export const Checkout: React.FC = () => {
     >
       <CheckCircle2 size={17} />
       {loading
-        ? 'Enviando pedido...'
+        ? paymentMethod === 'MercadoPago'
+          ? 'Redirigiendo a Mercado Pago...'
+          : 'Enviando pedido...'
         : hasStockIssues
           ? 'Hay productos sin stock'
           : submitError
             ? 'Reintentar pedido'
-            : 'Confirmar pedido'}
+            : paymentMethod === 'MercadoPago'
+              ? 'Ir a pagar con Mercado Pago'
+              : 'Confirmar pedido'}
     </button>
   );
 
