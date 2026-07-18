@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Search, ShoppingBag } from 'lucide-react';
+import { Home, Search, ShoppingBag, User } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { cn } from '../lib/utils';
 
@@ -40,6 +40,15 @@ export const MobileNav: React.FC = () => {
           </span>
         )}
         <span className="text-[10px] font-medium">Carrito</span>
+      </NavLink>
+      <NavLink
+        to="/cuenta"
+        className={({ isActive }) =>
+          cn('flex flex-col items-center gap-1 text-stone-500 transition-colors', isActive && 'text-[#2D6A4F]')
+        }
+      >
+        <User size={20} />
+        <span className="text-[10px] font-medium">Cuenta</span>
       </NavLink>
     </nav>
   );

@@ -68,6 +68,17 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   }
   const deliveryMode: 'manana' | 'hoy' = body.deliveryMode === 'hoy' ? 'hoy' : 'manana';
 
+  // Cliente con cuenta: el token viene en el header y se VERIFICA contra
+  // Supabase (nunca se acepta un user_id enviado directo por el navegador).
+  let userId: string | null = null;
+  const authHeader = req.headers.authorization;
+  const token =
+    typeof authHeader === 'string' ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
+  if (token) {
+    const { data: userData } = await supabase.auth.getUser(token);
+    userId = userData.user?.id ?? null;
+  }
+
   let orderId: string | null = null;
 
   try {
@@ -162,6 +173,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       delivery_mode: deliveryMode,
       delivery_slot: deliveryMode === 'hoy' ? body.deliverySlot ?? null : null,
       payment_status: 'pendiente_pago',
+      user_id: userId,
     });
     if (insertError) throw new Error(insertError.message);
 

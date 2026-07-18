@@ -6,8 +6,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { loadConfig, DEFAULT_CONFIG, computeDeliveryFee } from '../lib/config';
 import { exceedsStock, loadStockRemaining } from '../lib/stock';
+import { usePageMeta } from '../lib/seo';
 
 export const Cart: React.FC = () => {
+  usePageMeta('Tu pedido | Fruto.app');
   const { items, updateQuantity, removeFromCart, total } = useCart();
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [stockRemaining, setStockRemaining] = useState<Record<string, number>>({});

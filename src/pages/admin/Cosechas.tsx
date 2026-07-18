@@ -3,7 +3,7 @@ import { Printer, ShoppingCart, Package, AlertTriangle, CheckCircle2, Plus, Penc
 import { Order } from '../../types';
 import { loadProducts } from '../../lib/products';
 import { loadOrders } from '../../lib/orders';
-import { loadStockInit, setStock } from '../../lib/stock';
+import { loadStockInit, setStock, orderReservesStock } from '../../lib/stock';
 import { Product } from '../../types';
 import { cn } from '../../lib/utils';
 
@@ -103,9 +103,11 @@ export const AdminCosechas: React.FC = () => {
     loadStockInit().then(setStockInit);
   }, []);
 
+  // Misma regla que stock_remaining() en la BD: no cuentan entregados,
+  // rechazados ni pedidos MP abandonados.
   const demand = useMemo(() => {
     const map: Record<string, number> = {};
-    for (const order of orders.filter((o) => o.status !== 'Entregado')) {
+    for (const order of orders.filter(orderReservesStock)) {
       for (const item of order.items) map[item.id] = (map[item.id] ?? 0) + item.quantity;
     }
     return map;
@@ -123,7 +125,7 @@ export const AdminCosechas: React.FC = () => {
 
   const needsRestock = rows.filter((r) => r.status === 'agotado' || r.status === 'bajo');
   const noData = rows.filter((r) => r.status === 'sinstock' && r.demand > 0);
-  const activeOrders = orders.filter((o) => o.status !== 'Entregado');
+  const activeOrders = orders.filter(orderReservesStock);
 
   const commitEdit = (id: string) => {
     const val = parseFloat(inputVal);
@@ -157,7 +159,7 @@ export const AdminCosechas: React.FC = () => {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-stone-800">Cosechas e Inventario</h1>
-          <p className="mt-1 text-sm text-stone-500">Registra cuánto tienes de cada producto. El sistema resta los pedidos activos automáticamente.</p>
+          <p className="mt-1 text-sm text-stone-500">Registra cuánto tienes de cada producto. Los pedidos activos se restan solos, y al marcar un pedido como Entregado se rebaja de tu stock automáticamente.</p>
         </div>
         <button type="button" onClick={handlePrint}
           className="flex shrink-0 items-center gap-2 rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-400 active:scale-95">

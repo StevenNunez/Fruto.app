@@ -28,6 +28,9 @@ import {
   normalizeChileanMobile,
 } from '../lib/phone';
 import { exceedsStock, loadStockRemaining } from '../lib/stock';
+import { getSession } from '../lib/auth';
+import { loadMyProfile, saveMyProfile } from '../lib/profile';
+import { usePageMeta } from '../lib/seo';
 
 const PAYMENT_OPTIONS = [
   {
@@ -47,6 +50,7 @@ const PAYMENT_OPTIONS = [
 ];
 
 export const Checkout: React.FC = () => {
+  usePageMeta('Finalizar pedido | Fruto.app');
   const { total, items, clearCart } = useCart();
   const navigate = useNavigate();
   const submitted = useRef(false);
@@ -84,6 +88,20 @@ export const Checkout: React.FC = () => {
     loadStockRemaining()
       .then(setStockRemaining)
       .catch((err) => console.error('Checkout stock:', err));
+
+    // Cliente con cuenta: precargar sus datos de entrega guardados.
+    loadMyProfile()
+      .then((profile) => {
+        if (!profile) return;
+        setFormData((prev) => ({
+          ...prev,
+          name: prev.name || profile.name,
+          address: prev.address || profile.address,
+          phone: prev.phone || (profile.phone ? formatChileanMobileInput(profile.phone) : ''),
+        }));
+        if (profile.sector) setSector(profile.sector);
+      })
+      .catch(() => {});
   }, []);
 
   const [formData, setFormData] = useState({ name: '', address: '', phone: '', notes: '' });
@@ -146,13 +164,29 @@ export const Checkout: React.FC = () => {
       deliverySlot: deliveryMode === 'hoy' ? deliverySlot : undefined,
     };
 
+    // Cliente con cuenta: refrescar sus datos guardados con lo recién
+    // escrito (así el próximo checkout parte al día) y vincular el pedido.
+    const session = await getSession().catch(() => null);
+    if (session) {
+      saveMyProfile({
+        name: deliveryPayload.customerName,
+        phone: deliveryPayload.customerPhone,
+        address: deliveryPayload.customerAddress,
+        sector,
+      }).catch(() => {});
+    }
+
     // MercadoPago: el pedido y el total se crean en el servidor (nunca
     // confiando en el navegador), que devuelve a dónde redirigir para pagar.
     if (paymentMethod === 'MercadoPago') {
       try {
         const res = await fetch('/api/create-preference', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            // Con sesión: el servidor vincula el pedido a la cuenta.
+            ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
           body: JSON.stringify({
             items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
             ...deliveryPayload,
@@ -184,6 +218,7 @@ export const Checkout: React.FC = () => {
       createdAt: new Date().toISOString(),
       status: 'Pendiente' as const,
       paymentStatus: 'pendiente_transferencia' as const,
+      userId: session?.user.id,
     };
     try {
       await createOrder(order);

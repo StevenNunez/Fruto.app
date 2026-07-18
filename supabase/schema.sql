@@ -45,7 +45,21 @@ create table if not exists orders (
   payment_status   text not null default 'pendiente_pago',
   mp_preference_id text,
   mp_payment_id    text,
+  -- null = pedido de invitado; con valor = vinculado a la cuenta del cliente
+  user_id          uuid references auth.users (id) on delete set null,
   created_at       timestamptz not null default now()
+);
+
+-- Perfil de cliente (cuentas opcionales): datos de entrega guardados.
+-- id = auth.uid(). RLS en policies.sql: cada cliente solo ve su fila.
+create table if not exists profiles (
+  id         uuid primary key references auth.users (id) on delete cascade,
+  name       text not null default '',
+  phone      text not null default '',
+  address    text not null default '',
+  sector     text not null default 'La Serena',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 -- Configuración (una sola fila, id siempre = 1)

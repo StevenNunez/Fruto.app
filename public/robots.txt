@@ -1,0 +1,13 @@
+# Fruto.app — frutas y verduras frescas a domicilio (La Serena / Coquimbo, Chile)
+# Bienvenidos buscadores y asistentes de IA. Info para LLMs: /llms.txt
+
+User-agent: *
+Allow: /
+# Páginas transaccionales y panel interno: sin valor para indexar
+Disallow: /admin
+Disallow: /cart
+Disallow: /checkout
+Disallow: /confirmation
+Disallow: /cuenta
+
+Sitemap: https://www.fruto.app/sitemap.xml

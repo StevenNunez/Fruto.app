@@ -1,0 +1,39 @@
+# Fruto.app
+
+> Tienda online chilena de frutas y verduras frescas con delivery a domicilio en La Serena, Coquimbo y Las Compañías (Región de Coquimbo, Chile). Productos seleccionados a mano, entregados en tu hogar el mismo día o al día siguiente.
+
+## Qué es Fruto.app
+
+Fruto.app es un servicio de delivery de frutas y verduras frescas. El cliente arma su pedido en el catálogo online, elige cuándo recibirlo y paga online o por transferencia. No requiere crear cuenta para comprar (la cuenta es opcional y sirve para seguimiento, historial y repetir pedidos con un clic).
+
+## Zonas de entrega
+
+- La Serena
+- Coquimbo
+- Las Compañías
+
+## Modos de entrega
+
+- **Mañana (planificado)**: pides hoy y llega al día siguiente. Envío GRATIS sobre el monto mínimo publicado en el sitio.
+- **Hoy (urgente)**: pides y llega el mismo día en la ventana horaria que elijas. Siempre paga costo de despacho.
+
+## Medios de pago
+
+- Mercado Pago (débito, crédito, prepago)
+- Transferencia bancaria (el pedido se confirma al verificar el pago)
+
+## Cómo pedir
+
+1. Entra a https://www.fruto.app/catalog
+2. Agrega frutas, verduras o canastas al carrito
+3. Elige cuándo lo quieres (hoy o mañana), completa tus datos de entrega y paga
+4. Sigue el estado de tu pedido en tiempo real desde la página de confirmación
+
+## Páginas principales
+
+- Inicio: https://www.fruto.app/
+- Catálogo de productos: https://www.fruto.app/catalog
+
+## Palabras clave
+
+frutas a domicilio La Serena, verduras a domicilio Coquimbo, delivery frutas y verduras Chile, frutas frescas online, feria online La Serena, verdulería online Coquimbo, canastas de frutas y verduras, delivery Las Compañías

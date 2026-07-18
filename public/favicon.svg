@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Fruto.app — ícono: baldosa verde, fruta naranja, hoja crema -->
+  <rect width="128" height="128" rx="34" fill="#2D6A4F"/>
+  <circle cx="64" cy="76" r="32" fill="#F4820A"/>
+  <path d="M67 40 C68 24 82 14 100 16 C99 33 86 44 70 44 C68.5 43 67.3 41.6 67 40 Z" fill="#FAFAF7"/>
+</svg>

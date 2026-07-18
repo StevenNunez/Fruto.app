@@ -19,6 +19,7 @@ type DbOrder = {
   payment_status: string | null;
   mp_preference_id: string | null;
   mp_payment_id: string | null;
+  user_id: string | null;
 };
 
 function mapDeliveryMode(raw: string | null | undefined): DeliveryMode {
@@ -54,6 +55,7 @@ function mapOrder(row: DbOrder): Order {
     paymentStatus: mapPaymentStatus(row.payment_status),
     mpPreferenceId: row.mp_preference_id ?? undefined,
     mpPaymentId: row.mp_payment_id ?? undefined,
+    userId: row.user_id ?? undefined,
   };
 }
 
@@ -75,6 +77,7 @@ function toDb(o: Order): DbOrder {
     payment_status: o.paymentStatus,
     mp_preference_id: o.mpPreferenceId ?? null,
     mp_payment_id: o.mpPaymentId ?? null,
+    user_id: o.userId ?? null,
   };
 }
 
@@ -85,6 +88,24 @@ export async function loadOrders(): Promise<Order[]> {
     .order('created_at', { ascending: false });
   if (error) {
     console.error('loadOrders:', error.message);
+    return [];
+  }
+  return (data as DbOrder[]).map(mapOrder);
+}
+
+// Historial del cliente con cuenta (la política RLS orders_select_own
+// respalda el filtro del lado del servidor).
+export async function loadMyOrders(): Promise<Order[]> {
+  const { data: userData } = await supabase.auth.getUser();
+  const uid = userData.user?.id;
+  if (!uid) return [];
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('user_id', uid)
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.error('loadMyOrders:', error.message);
     return [];
   }
   return (data as DbOrder[]).map(mapOrder);

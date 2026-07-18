@@ -26,6 +26,14 @@ export type DeliveryMode = 'manana' | 'hoy';
 
 export type Sector = 'La Serena' | 'Coquimbo' | 'Las Compañías';
 
+/** Datos de entrega guardados del cliente con cuenta (tabla profiles). */
+export type Profile = {
+  name: string;
+  phone: string;
+  address: string;
+  sector: Sector;
+};
+
 export type CostCategory = 'Compra' | 'Transporte' | 'Empaque' | 'Otro';
 
 export type CostEntry = {
@@ -99,4 +107,6 @@ export type Order = {
   mpPreferenceId?: string;
   /** id del pago confirmado por el webhook de Mercado Pago. */
   mpPaymentId?: string;
+  /** Cuenta del cliente dueño del pedido; undefined = pedido de invitado. */
+  userId?: string;
 };

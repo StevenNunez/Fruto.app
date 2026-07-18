@@ -1,0 +1,17 @@
+{
+  "name": "Fruto.app — Frutas y verduras a tu hogar",
+  "short_name": "Fruto",
+  "description": "Frutas y verduras frescas, seleccionadas para ti y entregadas en tu hogar. La Serena, Coquimbo y Las Compañías.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FAFAF7",
+  "theme_color": "#2D6A4F",
+  "lang": "es-CL",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

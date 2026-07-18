@@ -10,8 +10,13 @@ import { Product } from '../types';
 import { ProductCard } from '../components/ProductCard';
 import { ProductSkeletonGrid } from '../components/ProductSkeleton';
 import { LoadError } from '../components/LoadError';
+import { InstallPrompt } from '../components/InstallPrompt';
+import { usePageMeta } from '../lib/seo';
 
 export const Home: React.FC = () => {
+  usePageMeta(
+    'Fruto.app | Frutas y Verduras Frescas a Domicilio — La Serena y Coquimbo'
+  );
   const [products, setProducts] = useState<Product[]>([]);
   const [stockRemaining, setStockRemaining] = useState<Record<string, number>>({});
   const [config, setConfig] = useState(DEFAULT_CONFIG);
@@ -217,6 +222,8 @@ export const Home: React.FC = () => {
           </div>
         </div>
       </section>
+
+      <InstallPrompt />
     </div>
   );
 };

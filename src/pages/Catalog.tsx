@@ -10,8 +10,13 @@ import { LoadError } from '../components/LoadError';
 import { Product } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { usePageMeta } from '../lib/seo';
 
 export const Catalog: React.FC = () => {
+  usePageMeta(
+    'Catálogo de Frutas y Verduras Frescas | Fruto.app',
+    'Elige entre frutas, verduras y canastas frescas del día. Delivery a domicilio en La Serena, Coquimbo y Las Compañías.'
+  );
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);

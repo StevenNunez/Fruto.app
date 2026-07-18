@@ -6,6 +6,18 @@ export async function signIn(email: string, password: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+// Registro de clientes (cuentas opcionales, Fase 4). Si en Supabase está
+// activada la confirmación por correo, la sesión llega null hasta que el
+// cliente confirme; needsEmailConfirm avisa a la UI para explicarlo.
+export async function signUp(
+  email: string,
+  password: string
+): Promise<{ needsEmailConfirm: boolean }> {
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) throw new Error(error.message);
+  return { needsEmailConfirm: !data.session };
+}
+
 export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
 }

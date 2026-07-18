@@ -1,6 +1,25 @@
 import { supabase } from './supabase';
+import type { Order } from '../types';
 
 export type StockInit = Record<string, number>;
+
+// Regla espejo de stock_remaining() en la BD (policies.sql): qué pedidos
+// reservan stock. Mantener ambas sincronizadas si se cambia una.
+// No reservan: entregados (el trigger ya los rebajó del stock físico),
+// pagos rechazados, y pedidos MP abandonados (>1 hora sin pagar).
+const RESERVA_PENDIENTE_PAGO_MS = 60 * 60 * 1000;
+
+export function orderReservesStock(o: Order): boolean {
+  if (o.status === 'Entregado') return false;
+  if (o.paymentStatus === 'rechazado') return false;
+  if (
+    o.paymentStatus === 'pendiente_pago' &&
+    Date.now() - new Date(o.createdAt).getTime() > RESERVA_PENDIENTE_PAGO_MS
+  ) {
+    return false;
+  }
+  return true;
+}
 
 export async function loadStockInit(): Promise<StockInit> {
   const { data } = await supabase.from('stock').select('product_id, initial_stock');
