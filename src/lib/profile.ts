@@ -1,8 +1,6 @@
 import { supabase } from './supabase';
 import type { Profile, Sector } from '../types';
 
-const SECTORS: Sector[] = ['La Serena', 'Coquimbo', 'Las Compañías'];
-
 type DbProfile = {
   id: string;
   name: string;
@@ -11,8 +9,10 @@ type DbProfile = {
   sector: string;
 };
 
+// Las zonas ahora son dinámicas (config.zonas): se acepta cualquier
+// texto guardado; el checkout valida contra las zonas activas al usarlo.
 function mapSector(raw: string): Sector {
-  return SECTORS.includes(raw as Sector) ? (raw as Sector) : 'La Serena';
+  return raw || 'La Serena';
 }
 
 async function myUserId(): Promise<string | null> {

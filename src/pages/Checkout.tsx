@@ -57,7 +57,7 @@ export const Checkout: React.FC = () => {
 
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [stockRemaining, setStockRemaining] = useState<Record<string, number>>({});
-  const sectors = getActiveSectors(config.sectors);
+  const sectors = getActiveSectors(config);
   const payments = PAYMENT_OPTIONS.filter((m) =>
     m.id === 'MercadoPago'
       ? config.paymentMethods.mercadopago
@@ -74,7 +74,7 @@ export const Checkout: React.FC = () => {
   useEffect(() => {
     loadConfig().then((cfg) => {
       setConfig(cfg);
-      const active = getActiveSectors(cfg.sectors);
+      const active = getActiveSectors(cfg);
       if (active.length > 0) setSector((s) => (active.includes(s) ? s : active[0]));
       setPaymentMethod((m) => {
         const stillOk =
@@ -142,7 +142,7 @@ export const Checkout: React.FC = () => {
     setSubmitError(false);
 
     try {
-      const freshStock = await loadStockRemaining();
+      const freshStock = await loadStockRemaining({ fresh: true });
       setStockRemaining(freshStock);
       const stillBad = items.some((item) => exceedsStock(item.id, item.quantity, freshStock));
       if (stillBad) {

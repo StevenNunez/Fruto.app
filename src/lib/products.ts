@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 import { supabase } from './supabase';
 import { Product } from '../types';
+import { cached, invalidate } from './cache';
 
 export const DEFAULT_CATEGORIES = ['Verduras', 'Frutas', 'Canastas', 'Temporada'];
 
@@ -44,29 +45,37 @@ function toDb(p: Product): DbProduct {
   };
 }
 
+// Caché de 60s: navegar Home ↔ Catálogo dentro de la ventana renderiza al
+// instante en vez de volver a pedir todo. Escribir invalida el caché.
 export async function loadProducts(): Promise<Product[]> {
-  const { data, error } = await supabase.from('products').select('*').order('name');
-  if (error) {
-    console.error('loadProducts:', error.message);
-    throw new Error(error.message);
-  }
-  return (data as DbProduct[]).map(mapProduct);
+  return cached('products', 60_000, async () => {
+    const { data, error } = await supabase.from('products').select('*').order('name');
+    if (error) {
+      console.error('loadProducts:', error.message);
+      throw new Error(error.message);
+    }
+    return (data as DbProduct[]).map(mapProduct);
+  });
 }
 
 export async function upsertProduct(product: Product): Promise<void> {
   const { error } = await supabase.from('products').upsert(toDb(product));
   if (error) throw new Error(error.message);
+  invalidate('products');
 }
 
 export async function deleteProduct(id: string): Promise<void> {
   const { error } = await supabase.from('products').delete().eq('id', id);
   if (error) throw new Error(error.message);
+  invalidate('products');
 }
 
 export async function loadCategories(): Promise<string[]> {
-  const { data } = await supabase.from('categories').select('name').order('name');
-  if (!data || data.length === 0) return [...DEFAULT_CATEGORIES];
-  return (data as { name: string }[]).map((r) => r.name);
+  return cached('categories', 60_000, async () => {
+    const { data } = await supabase.from('categories').select('name').order('name');
+    if (!data || data.length === 0) return [...DEFAULT_CATEGORIES];
+    return (data as { name: string }[]).map((r) => r.name);
+  });
 }
 
 export async function saveCategories(cats: string[]): Promise<void> {
@@ -76,6 +85,7 @@ export async function saveCategories(cats: string[]): Promise<void> {
     const { error: insErr } = await supabase.from('categories').insert(cats.map((name) => ({ name })));
     if (insErr) throw new Error(insErr.message);
   }
+  invalidate('categories');
 }
 
 export function newProductId(): string {

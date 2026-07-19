@@ -10,9 +10,8 @@ const STATUS_META: Record<OrderStatus, { dot: string; label: string }> = {
   Entregado: { dot: 'bg-emerald-500', label: 'Entregado' },
 };
 
-const SECTOR_COLOR: Record<Sector, string> = {
-  'La Serena': 'bg-brand-green', Coquimbo: 'bg-brand-orange', 'Las Compañías': 'bg-blue-400',
-};
+// Las zonas son dinámicas: los colores se asignan cíclicamente.
+const SECTOR_PALETTE = ['bg-brand-green', 'bg-brand-orange', 'bg-blue-400', 'bg-purple-400', 'bg-rose-400', 'bg-teal-400'];
 
 export const AdminReportes: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -28,16 +27,12 @@ export const AdminReportes: React.FC = () => {
   }, [orders]);
 
   const bySector = useMemo(() => {
-    const map: Record<Sector, { revenue: number; orders: number }> = {
-      'La Serena': { revenue: 0, orders: 0 },
-      Coquimbo: { revenue: 0, orders: 0 },
-      'Las Compañías': { revenue: 0, orders: 0 },
-    };
+    const map: Record<Sector, { revenue: number; orders: number }> = {};
     for (const o of orders) {
-      if (o.customerSector && map[o.customerSector]) {
-        map[o.customerSector].revenue += o.total;
-        map[o.customerSector].orders += 1;
-      }
+      if (!o.customerSector) continue;
+      if (!map[o.customerSector]) map[o.customerSector] = { revenue: 0, orders: 0 };
+      map[o.customerSector].revenue += o.total;
+      map[o.customerSector].orders += 1;
     }
     return map;
   }, [orders]);
@@ -96,14 +91,14 @@ export const AdminReportes: React.FC = () => {
         <div className="rounded-2xl border border-stone-200 bg-white p-5">
           <h2 className="mb-4 text-sm font-bold text-stone-800">Ventas por Sector</h2>
           <div className="space-y-3">
-            {(Object.entries(bySector) as [Sector, { revenue: number; orders: number }][]).map(([sector, data]) => (
+            {(Object.entries(bySector) as [Sector, { revenue: number; orders: number }][]).map(([sector, data], i) => (
               <div key={sector}>
                 <div className="mb-1 flex items-center justify-between text-xs">
                   <span className="font-semibold text-stone-700">{sector}</span>
                   <span className="text-stone-500">{formatCLP(data.revenue)} · {data.orders} pedidos</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-stone-100">
-                  <div className={cn('h-full rounded-full transition-all', SECTOR_COLOR[sector])}
+                  <div className={cn('h-full rounded-full transition-all', SECTOR_PALETTE[i % SECTOR_PALETTE.length])}
                     style={{ width: maxSectorRevenue > 0 ? `${(data.revenue / maxSectorRevenue) * 100}%` : '0%' }} />
                 </div>
               </div>

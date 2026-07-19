@@ -8,6 +8,7 @@ import { Competidor, CompetidorProducto, Product, TipoCompetidor } from '../../t
 import { loadProducts } from '../../lib/products';
 import { formatCLP } from '../../lib/orders';
 import { cn } from '../../lib/utils';
+import { getSession } from '../../lib/auth';
 
 const STORAGE_KEY = 'fruto_competidores';
 const TIPOS: TipoCompetidor[] = ['Supermercado', 'Negocio local', 'Otro'];
@@ -157,6 +158,48 @@ const DEFAULT_COMPETIDORES: Competidor[] = [
   },
 ];
 
+/** Para cruzar los nombres extraídos por la IA con los productos rastreados. */
+function normalizeNombre(s: string): string {
+  return s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+type PrecioExtraido = { nombre: string; precio: number; unidad: string };
+
+/** Actualiza los precios rastreados con lo extraído del sitio; si el
+ * competidor no tenía productos, se cargan los encontrados (máx. 25). */
+function mergePreciosExtraidos(
+  comp: Competidor,
+  items: PrecioExtraido[]
+): { updated: Competidor; matched: number; added: number } {
+  const now = new Date().toISOString();
+  let matched = 0;
+  const productos = comp.productos.map((p) => {
+    const b = normalizeNombre(p.nombre);
+    const hit = items.find((i) => {
+      const a = normalizeNombre(i.nombre);
+      return a === b || a.includes(b) || b.includes(a);
+    });
+    if (hit) {
+      matched++;
+      return { ...p, precio: Math.round(hit.precio), fechaActualizacion: now };
+    }
+    return p;
+  });
+  let added = 0;
+  if (comp.productos.length === 0) {
+    for (const i of items.slice(0, 25)) {
+      productos.push({
+        nombre: i.nombre,
+        precio: Math.round(i.precio),
+        unidad: i.unidad || 'unidad',
+        fechaActualizacion: now,
+      });
+      added++;
+    }
+  }
+  return { updated: { ...comp, productos }, matched, added };
+}
+
 function loadCompetidores(): Competidor[] {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -216,7 +259,11 @@ const CompetidorCard: React.FC<{
   competidor: Competidor;
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ competidor, onEdit, onDelete }) => {
+  onScrape: () => void;
+  scraping: boolean;
+  scrapeDisabled: boolean;
+  scrapeMsg?: { ok: boolean; text: string };
+}> = ({ competidor, onEdit, onDelete, onScrape, scraping, scrapeDisabled, scrapeMsg }) => {
   const [showProducts, setShowProducts] = useState(false);
   const TipoIcon = TIPO_ICON[competidor.tipo];
 
@@ -264,10 +311,36 @@ const CompetidorCard: React.FC<{
         </div>
       </div>
 
-      {/* Scraping badge */}
-      <div className="mb-3 flex items-center gap-1.5 rounded-xl bg-stone-50 px-3 py-1.5">
-        <Zap size={11} className="text-stone-300" />
-        <span className="text-[10px] font-semibold text-stone-400">Auto-actualización · Próximamente</span>
+      {/* Actualización automática de precios con IA */}
+      <div className="mb-3">
+        {competidor.sitioWeb ? (
+          <button
+            type="button"
+            onClick={onScrape}
+            disabled={scraping || scrapeDisabled}
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-brand-green/30 bg-brand-green/5 px-3 py-2 text-xs font-bold text-brand-green transition hover:bg-brand-green/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Zap size={12} className={scraping ? 'animate-pulse' : undefined} />
+            {scraping ? 'Leyendo el sitio con IA...' : 'Actualizar precios con IA'}
+          </button>
+        ) : (
+          <div className="flex items-center gap-1.5 rounded-xl bg-stone-50 px-3 py-1.5">
+            <Zap size={11} className="text-stone-300" />
+            <span className="text-[10px] font-semibold text-stone-400">
+              Agrega el sitio web para poder actualizar precios con IA
+            </span>
+          </div>
+        )}
+        {scrapeMsg && (
+          <p
+            className={cn(
+              'mt-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium',
+              scrapeMsg.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+            )}
+          >
+            {scrapeMsg.text}
+          </p>
+        )}
       </div>
 
       {competidor.productos.length > 0 && (
@@ -325,6 +398,71 @@ export const AdminCompetencia: React.FC = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const [misProductos, setMisProductos] = useState<Product[]>([]);
+
+  // Actualización de precios con IA (una a la vez: cada llamada tiene costo)
+  const [scrapingId, setScrapingId] = useState<string | null>(null);
+  const [scrapeMsgs, setScrapeMsgs] = useState<Record<string, { ok: boolean; text: string }>>({});
+
+  const actualizarPrecios = async (comp: Competidor) => {
+    if (!comp.sitioWeb || scrapingId) return;
+    setScrapingId(comp.id);
+    setScrapeMsgs((prev) => {
+      const next = { ...prev };
+      delete next[comp.id];
+      return next;
+    });
+    try {
+      const session = await getSession();
+      if (!session) throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.');
+      const res = await fetch('/api/scrape-competencia', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          url: comp.sitioWeb,
+          productos: comp.productos.map((p) => p.nombre),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'No se pudo leer el sitio.');
+
+      const { updated, matched, added } = mergePreciosExtraidos(
+        comp,
+        (data.items ?? []) as PrecioExtraido[]
+      );
+      setCompetidores((prev) => {
+        const next = prev.map((c) => (c.id === comp.id ? updated : c));
+        saveCompetidores(next);
+        return next;
+      });
+
+      const parts: string[] = [];
+      if (matched > 0) parts.push(`${matched} precio${matched !== 1 ? 's' : ''} actualizado${matched !== 1 ? 's' : ''}`);
+      if (added > 0) parts.push(`${added} producto${added !== 1 ? 's' : ''} agregado${added !== 1 ? 's' : ''}`);
+      setScrapeMsgs((prev) => ({
+        ...prev,
+        [comp.id]: {
+          ok: true,
+          text:
+            parts.length > 0
+              ? `✓ ${parts.join(' · ')}`
+              : `Se leyeron ${data.total ?? 0} precios del sitio, pero ninguno coincide con tus productos rastreados.`,
+        },
+      }));
+    } catch (err) {
+      setScrapeMsgs((prev) => ({
+        ...prev,
+        [comp.id]: {
+          ok: false,
+          text: err instanceof Error ? err.message : 'Error inesperado al leer el sitio.',
+        },
+      }));
+    } finally {
+      setScrapingId(null);
+    }
+  };
 
   useEffect(() => {
     setCompetidores(loadCompetidores());
@@ -496,6 +634,10 @@ export const AdminCompetencia: React.FC = () => {
                 competidor={c}
                 onEdit={() => openEdit(c)}
                 onDelete={() => setDeleteId(c.id)}
+                onScrape={() => actualizarPrecios(c)}
+                scraping={scrapingId === c.id}
+                scrapeDisabled={scrapingId !== null && scrapingId !== c.id}
+                scrapeMsg={scrapeMsgs[c.id]}
               />
             ))}
           </div>

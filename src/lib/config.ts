@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { DeliveryMode, Sector } from '../types';
+import type { DeliveryMode, Sector, ZonaEntrega } from '../types';
 
 export type Config = {
   businessName: string;
@@ -16,6 +16,9 @@ export type Config = {
   deliveryFee: number;
   /** Envío gratis solo aplica a pedidos para MAÑANA sobre este monto. */
   freeDeliveryThreshold: number;
+  /** Zonas/rutas de entrega editables por el admin (checkout, ruta, filtros). */
+  zonas: ZonaEntrega[];
+  /** LEGADO: toggles fijos anteriores; solo se usan para derivar zonas si `zonas` no existe. */
   sectors: { la_serena: boolean; coquimbo: boolean; las_companias: boolean };
   paymentMethods: { mercadopago: boolean; transferencia: boolean };
 };
@@ -74,18 +77,33 @@ export const DEFAULT_CONFIG: Config = {
   deliveryWindow: '7:00 – 10:00 PM',
   deliveryFee: 2500,
   freeDeliveryThreshold: 10000,
+  zonas: [
+    { id: 'la-serena', nombre: 'La Serena' },
+    { id: 'coquimbo', nombre: 'Coquimbo' },
+    { id: 'las-companias', nombre: 'Las Compañías' },
+  ],
   sectors: { la_serena: true, coquimbo: true, las_companias: true },
   paymentMethods: { mercadopago: true, transferencia: true },
 };
 
-const SECTOR_MAP: { key: keyof Config['sectors']; label: Sector }[] = [
+const SECTOR_MAP: { key: keyof Config['sectors']; label: string }[] = [
   { key: 'la_serena', label: 'La Serena' },
   { key: 'coquimbo', label: 'Coquimbo' },
   { key: 'las_companias', label: 'Las Compañías' },
 ];
 
-export function getActiveSectors(sectors: Config['sectors']): Sector[] {
-  return SECTOR_MAP.filter((s) => sectors[s.key]).map((s) => s.label);
+/** Zonas activas de la config; si la config guardada es anterior a las
+ * zonas editables, se derivan de los toggles legados. */
+export function getZonas(config: Pick<Config, 'zonas' | 'sectors'>): ZonaEntrega[] {
+  if (config.zonas && config.zonas.length > 0) return config.zonas;
+  return SECTOR_MAP.filter((s) => config.sectors?.[s.key] !== false).map((s) => ({
+    id: s.key,
+    nombre: s.label,
+  }));
+}
+
+export function getActiveSectors(config: Pick<Config, 'zonas' | 'sectors'>): Sector[] {
+  return getZonas(config).map((z) => z.nombre);
 }
 
 /** "15:00" → "3 PM"; "15:30" → "3:30 PM" (para textos de la tienda). */
@@ -111,12 +129,23 @@ function localLegacyConfig(): Partial<Config> {
   }
 }
 
+// Caché en memoria (5 min): la config se pide en casi todas las páginas;
+// solo se cachea una lectura EXITOSA de Supabase (nunca el fallback), y
+// guardar desde /admin/configuracion la actualiza al instante.
+let configCache: { at: number; data: Config } | null = null;
+const CONFIG_TTL_MS = 5 * 60 * 1000;
+
 export async function loadConfig(): Promise<Config> {
+  if (configCache && Date.now() - configCache.at < CONFIG_TTL_MS) return configCache.data;
   try {
     const { data, error } = await supabase.from('config').select('data').eq('id', 1).maybeSingle();
     if (error) console.error('loadConfig:', error.message);
     const saved = (data?.data ?? {}) as Partial<Config>;
-    if (Object.keys(saved).length > 0) return { ...DEFAULT_CONFIG, ...saved };
+    if (Object.keys(saved).length > 0) {
+      const merged = { ...DEFAULT_CONFIG, ...saved };
+      configCache = { at: Date.now(), data: merged };
+      return merged;
+    }
   } catch (err) {
     console.error('loadConfig:', err);
   }
@@ -126,4 +155,5 @@ export async function loadConfig(): Promise<Config> {
 export async function saveConfig(config: Config): Promise<void> {
   const { error } = await supabase.from('config').upsert({ id: 1, data: config });
   if (error) throw new Error(error.message);
+  configCache = { at: Date.now(), data: config };
 }

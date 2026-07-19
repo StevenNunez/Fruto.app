@@ -238,7 +238,7 @@ const LoggedIn: React.FC<{ email: string }> = ({ email }) => {
     load();
   }, [load]);
 
-  const sectors = getActiveSectors(config.sectors);
+  const sectors = getActiveSectors(config);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();

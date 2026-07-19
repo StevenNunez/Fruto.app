@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { Order } from '../types';
+import { cached, invalidate } from './cache';
 
 export type StockInit = Record<string, number>;
 
@@ -34,16 +35,27 @@ export async function loadStockInit(): Promise<StockInit> {
 
 // Stock disponible por producto, calculado en la base de datos (RPC
 // security definer) para no exponer los pedidos al público.
-export async function loadStockRemaining(): Promise<Record<string, number>> {
-  const { data, error } = await supabase.rpc('stock_remaining');
-  if (error) {
-    console.error('stock_remaining:', error.message);
-    throw new Error(error.message);
+// Caché de 20s para navegar rápido; `{ fresh: true }` lo salta (el
+// checkout revalida SIEMPRE fresco justo antes de crear el pedido).
+export async function loadStockRemaining(
+  opts?: { fresh?: boolean }
+): Promise<Record<string, number>> {
+  const fetcher = async () => {
+    const { data, error } = await supabase.rpc('stock_remaining');
+    if (error) {
+      console.error('stock_remaining:', error.message);
+      throw new Error(error.message);
+    }
+    if (!data) return {};
+    return Object.fromEntries(
+      (data as { product_id: string; remaining: number }[]).map((r) => [r.product_id, r.remaining])
+    );
+  };
+  if (opts?.fresh) {
+    invalidate('stock_remaining');
+    return fetcher();
   }
-  if (!data) return {};
-  return Object.fromEntries(
-    (data as { product_id: string; remaining: number }[]).map((r) => [r.product_id, r.remaining])
-  );
+  return cached('stock_remaining', 20_000, fetcher);
 }
 
 /** true si la cantidad pedida supera el stock restante (si no hay dato de stock, no bloquea). */
@@ -60,6 +72,7 @@ export async function setStock(productId: string, initialStock: number): Promise
   await supabase
     .from('stock')
     .upsert({ product_id: productId, initial_stock: initialStock });
+  invalidate('stock_remaining');
 }
 
 export async function saveStockInit(stock: StockInit): Promise<void> {
@@ -69,4 +82,5 @@ export async function saveStockInit(stock: StockInit): Promise<void> {
   }));
   if (rows.length === 0) return;
   await supabase.from('stock').upsert(rows);
+  invalidate('stock_remaining');
 }

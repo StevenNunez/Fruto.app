@@ -3,6 +3,7 @@ import { Search, Download, CheckCircle2, X, Truck } from 'lucide-react';
 import { Order, OrderStatus, PaymentStatus, Sector } from '../../types';
 import { cn } from '../../lib/utils';
 import { loadOrders, updateOrderStatus, updatePaymentStatus, formatCLP, shortOrderId } from '../../lib/orders';
+import { loadConfig, getActiveSectors } from '../../lib/config';
 
 const PAYMENT_STATUS_META: Record<PaymentStatus, { label: string; className: string }> = {
   pagado: { label: 'Pagado', className: 'bg-emerald-100 text-emerald-800' },
@@ -35,11 +36,41 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
   'En camino': 'Entregado',
 };
 
-const SECTORS: (Sector | 'Todos')[] = ['Todos', 'La Serena', 'Coquimbo', 'Las Compañías'];
+// Los filtros de zona se arman con las zonas configuradas + las que
+// aparezcan en pedidos antiguos (por si se renombró o eliminó una zona).
 
 function deliveryLabel(o: Order): string {
   if (o.deliveryMode === 'hoy') return o.deliverySlot ? `Hoy · ${o.deliverySlot}` : 'Hoy';
   return 'Mañana';
+}
+
+/* ── Día de ENTREGA de un pedido ──────────────────────────────────────
+   Un pedido "hoy" se entrega el día que se creó; uno "mañana" al día
+   siguiente. Esto permite ver los pedidos por día y verificar que todos
+   los del día queden entregados. */
+
+function localDayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function deliveryDayKey(o: Order): string {
+  const d = new Date(o.createdAt);
+  if (o.deliveryMode !== 'hoy') d.setDate(d.getDate() + 1);
+  return localDayKey(d);
+}
+
+function dayKeyOffset(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return localDayKey(d);
+}
+
+function dayKeyLabel(key: string): string {
+  if (key === dayKeyOffset(0)) return 'hoy';
+  if (key === dayKeyOffset(1)) return 'mañana';
+  if (key === dayKeyOffset(-1)) return 'ayer';
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
 function exportRoute(orders: Order[]) {
@@ -62,12 +93,26 @@ function exportRoute(orders: Order[]) {
 
 export const AdminPedidos: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [zonas, setZonas] = useState<string[]>([]);
   const [filterSector, setFilterSector] = useState<Sector | 'Todos'>('Todos');
+  // Por defecto se ven las ENTREGAS DE HOY, no el historial global.
+  const [diaFiltro, setDiaFiltro] = useState<string | 'todos'>(dayKeyOffset(0));
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'kanban' | 'lista'>('kanban');
   const [confirmingDeparture, setConfirmingDeparture] = useState(false);
 
-  useEffect(() => { loadOrders().then(setOrders); }, []);
+  useEffect(() => {
+    loadOrders()
+      .then(setOrders)
+      .finally(() => setLoading(false));
+    loadConfig().then((cfg) => setZonas(getActiveSectors(cfg)));
+  }, []);
+
+  const sectorFilters = useMemo<(Sector | 'Todos')[]>(() => {
+    const extra = orders.map((o) => o.customerSector).filter((s) => s && !zonas.includes(s));
+    return ['Todos', ...zonas, ...Array.from(new Set(extra))];
+  }, [zonas, orders]);
 
   const changeStatus = (orderId: string, status: OrderStatus) => {
     setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
@@ -86,21 +131,34 @@ export const AdminPedidos: React.FC = () => {
     if (next) changeStatus(orderId, next);
   };
 
+  const filteredOrders = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return orders.filter((o) => {
+      const dayOk = diaFiltro === 'todos' || deliveryDayKey(o) === diaFiltro;
+      const sectorOk = filterSector === 'Todos' || o.customerSector === filterSector;
+      const searchOk = !q || o.id.toLowerCase().includes(q) || o.customerName.toLowerCase().includes(q);
+      return dayOk && sectorOk && searchOk;
+    });
+  }, [orders, diaFiltro, filterSector, search]);
+
+  // "Confirmar salida" y el CSV operan sobre lo FILTRADO (el día elegido),
+  // no sobre el historial global.
   const confirmDeparture = () => {
-    const toAdvance = orders.filter((o) => o.status === 'Preparando');
-    setOrders((prev) => prev.map((o) => o.status === 'Preparando' ? { ...o, status: 'En camino' as OrderStatus } : o));
+    const toAdvance = filteredOrders.filter((o) => o.status === 'Preparando');
+    const ids = new Set(toAdvance.map((o) => o.id));
+    setOrders((prev) => prev.map((o) => (ids.has(o.id) ? { ...o, status: 'En camino' as OrderStatus } : o)));
     toAdvance.forEach((o) => updateOrderStatus(o.id, 'En camino').catch(console.error));
     setConfirmingDeparture(false);
   };
 
-  const filteredOrders = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return orders.filter((o) => {
-      const sectorOk = filterSector === 'Todos' || o.customerSector === filterSector;
-      const searchOk = !q || o.id.toLowerCase().includes(q) || o.customerName.toLowerCase().includes(q);
-      return sectorOk && searchOk;
-    });
-  }, [orders, filterSector, search]);
+  // Progreso de entrega del día elegido (independiente de sector/búsqueda):
+  // la pregunta que responde es "¿entregué TODO lo de este día?".
+  const dayProgress = useMemo(() => {
+    if (diaFiltro === 'todos') return null;
+    const delDia = orders.filter((o) => deliveryDayKey(o) === diaFiltro);
+    const entregados = delDia.filter((o) => o.status === 'Entregado').length;
+    return { total: delDia.length, entregados, pendientes: delDia.length - entregados };
+  }, [orders, diaFiltro]);
 
   const stats = useMemo(() => {
     const totalOrders = filteredOrders.length;
@@ -116,7 +174,7 @@ export const AdminPedidos: React.FC = () => {
     return map;
   }, [filteredOrders]);
 
-  const preparandoCount = orders.filter((o) => o.status === 'Preparando').length;
+  const preparandoCount = filteredOrders.filter((o) => o.status === 'Preparando').length;
 
   return (
     <div className="p-4 md:p-6 lg:p-8">
@@ -124,12 +182,11 @@ export const AdminPedidos: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-stone-800">Pedidos</h1>
           <p className="mt-1 text-sm text-stone-500">
-            Cierre en <span className="font-medium text-stone-700">2h 14min</span>
-            {' · '}Salida <span className="font-medium text-stone-700">18:30</span>
+            Gestiona los pedidos del día: pagos, preparación y entrega.
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
-          <button type="button" onClick={() => exportRoute(orders)}
+          <button type="button" onClick={() => exportRoute(filteredOrders)}
             className="flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-400 active:scale-95">
             <Download size={15} />Exportar ruta
           </button>
@@ -141,6 +198,69 @@ export const AdminPedidos: React.FC = () => {
         </div>
       </div>
 
+      {/* ── Día de entrega ── */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-bold uppercase tracking-wider text-stone-400">Entregas de</span>
+        {([
+          { key: dayKeyOffset(0), label: 'Hoy' },
+          { key: dayKeyOffset(1), label: 'Mañana' },
+        ] as { key: string; label: string }[]).map(({ key, label }) => (
+          <button key={key} type="button" onClick={() => setDiaFiltro(key)}
+            className={cn('rounded-full px-4 py-2 text-sm font-semibold transition-all',
+              diaFiltro === key ? 'bg-brand-green text-white' : 'border border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+            )}>{label}</button>
+        ))}
+        <input
+          type="date"
+          value={diaFiltro !== 'todos' ? diaFiltro : ''}
+          onChange={(e) => { if (e.target.value) setDiaFiltro(e.target.value); }}
+          className={cn(
+            'rounded-full border px-3 py-1.5 text-sm font-semibold transition',
+            diaFiltro !== 'todos' && diaFiltro !== dayKeyOffset(0) && diaFiltro !== dayKeyOffset(1)
+              ? 'border-brand-green bg-brand-green/5 text-brand-green'
+              : 'border-stone-200 bg-white text-stone-500'
+          )}
+          aria-label="Elegir otro día"
+        />
+        <button type="button" onClick={() => setDiaFiltro('todos')}
+          className={cn('rounded-full px-4 py-2 text-sm font-semibold transition-all',
+            diaFiltro === 'todos' ? 'bg-stone-700 text-white' : 'border border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+          )}>Todos</button>
+      </div>
+
+      {/* ── ¿Entregué todo lo del día? ── */}
+      {dayProgress && (
+        dayProgress.total === 0 ? (
+          <p className="mb-6 rounded-2xl border border-stone-200 bg-white px-5 py-4 text-sm text-stone-400">
+            No hay entregas programadas para {dayKeyLabel(diaFiltro)}.
+          </p>
+        ) : dayProgress.pendientes === 0 ? (
+          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+            <CheckCircle2 size={20} className="shrink-0 text-emerald-600" />
+            <p className="text-sm font-bold text-emerald-800">
+              ¡Listo! Los {dayProgress.total} pedidos de {dayKeyLabel(diaFiltro)} están entregados.
+            </p>
+          </div>
+        ) : (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-bold text-amber-800">
+                Entregas de {dayKeyLabel(diaFiltro)}: {dayProgress.entregados} de {dayProgress.total}
+              </p>
+              <p className="text-sm font-bold text-amber-700">
+                faltan {dayProgress.pendientes}
+              </p>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/70">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all"
+                style={{ width: `${(dayProgress.entregados / dayProgress.total) * 100}%` }}
+              />
+            </div>
+          </div>
+        )
+      )}
+
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         <StatCard label="Pedidos" value={String(stats.totalOrders)} sub="Total filtrado" />
         <StatCard label="Ventas brutas" value={formatCLP(stats.gross)} sub="Meta: $320k" />
@@ -150,7 +270,7 @@ export const AdminPedidos: React.FC = () => {
 
       <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {SECTORS.map((s) => (
+          {sectorFilters.map((s) => (
             <button key={s} type="button" onClick={() => setFilterSector(s)}
               className={cn('whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all',
                 filterSector === s ? 'bg-brand-green text-white' : 'border border-stone-200 bg-white text-stone-600 hover:border-stone-300'
@@ -176,7 +296,13 @@ export const AdminPedidos: React.FC = () => {
         </div>
       </div>
 
-      {view === 'kanban' ? (
+      {loading ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {STATUSES.map((s) => (
+            <div key={s} className="min-h-[320px] animate-pulse rounded-2xl border border-stone-200/60 bg-stone-100/60" />
+          ))}
+        </div>
+      ) : view === 'kanban' ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {STATUSES.map((status) => (
             <div key={status}>
@@ -215,7 +341,7 @@ export const AdminPedidos: React.FC = () => {
               Se marcarán <strong className="text-stone-700">{preparandoCount} pedidos</strong> como "En camino".
             </p>
             <div className="mt-4 max-h-48 space-y-2 overflow-y-auto">
-              {orders.filter((o) => o.status === 'Preparando').map((o) => (
+              {filteredOrders.filter((o) => o.status === 'Preparando').map((o) => (
                 <div key={o.id} className="flex items-center justify-between rounded-xl bg-stone-50 px-3 py-2 text-sm">
                   <div>
                     <p className="font-semibold text-stone-800">{o.customerName}</p>

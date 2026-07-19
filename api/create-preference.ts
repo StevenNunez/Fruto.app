@@ -20,7 +20,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY as string
 );
 
-const SECTORS = ['La Serena', 'Coquimbo', 'Las Compañías'];
+// Zonas legadas: se usan solo si la config aún no tiene zonas editables.
+const LEGACY_SECTORS = ['La Serena', 'Coquimbo', 'Las Compañías'];
 
 type IncomingItem = { id: string; quantity: number };
 type IncomingBody = {
@@ -62,8 +63,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     res.status(400).json({ error: 'Faltan datos de entrega.' });
     return;
   }
-  if (!body.customerSector || !SECTORS.includes(body.customerSector)) {
-    res.status(400).json({ error: 'Sector de entrega inválido.' });
+  if (!body.customerSector?.trim()) {
+    res.status(400).json({ error: 'Falta el sector de entrega.' });
     return;
   }
   const deliveryMode: 'manana' | 'hoy' = body.deliveryMode === 'hoy' ? 'hoy' : 'manana';
@@ -146,7 +147,19 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     // 3. Total real: subtotal + despacho según config y modo de entrega
     const { data: configRow } = await supabase.from('config').select('data').eq('id', 1).maybeSingle();
-    const cfg = (configRow?.data ?? {}) as { deliveryFee?: number; freeDeliveryThreshold?: number };
+    const cfg = (configRow?.data ?? {}) as {
+      deliveryFee?: number;
+      freeDeliveryThreshold?: number;
+      zonas?: { nombre: string }[];
+    };
+
+    // Validar la zona contra las configuradas por el admin (dinámicas).
+    const zonasValidas =
+      cfg.zonas && cfg.zonas.length > 0 ? cfg.zonas.map((z) => z.nombre) : LEGACY_SECTORS;
+    if (!zonasValidas.includes(body.customerSector.trim())) {
+      res.status(400).json({ error: 'Zona de entrega inválida.' });
+      return;
+    }
     const subtotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const deliveryFee = computeDeliveryFee(
       subtotal,

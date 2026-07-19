@@ -3,6 +3,17 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+// Adelanta la conexión (DNS + TLS) con Supabase mientras React monta:
+// la primera petición de datos parte con el "camino" ya abierto.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+if (supabaseUrl) {
+  const link = document.createElement('link');
+  link.rel = 'preconnect';
+  link.href = new URL(supabaseUrl).origin;
+  link.crossOrigin = 'anonymous';
+  document.head.appendChild(link);
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

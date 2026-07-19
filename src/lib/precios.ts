@@ -84,3 +84,15 @@ export const deleteGastoFijo = (id: string) => deleteRow('gastos_fijos', id);
 export const loadProductosCosto = () => loadAll<ProductoCosto>('product_costs', 'fruto_product_costs');
 export const saveProductosCosto = (productos: ProductoCosto[]) => upsertAllDebounced('product_costs', productos);
 export const deleteProductoCosto = (id: string) => deleteRow('product_costs', id);
+
+// Guarda UNA fila de costo (con debounce por producto). Desde la
+// sincronización con el catálogo, el id de la fila ES el id del producto
+// del catálogo — así los costos siguen al producto real de la tienda.
+const rowTimers: Partial<Record<string, ReturnType<typeof setTimeout>>> = {};
+export function upsertProductoCosto(p: ProductoCosto): void {
+  clearTimeout(rowTimers[p.id]);
+  rowTimers[p.id] = setTimeout(async () => {
+    const { error } = await supabase.from('product_costs').upsert({ id: p.id, data: p });
+    if (error) console.error('product_costs:', error.message);
+  }, 500);
+}

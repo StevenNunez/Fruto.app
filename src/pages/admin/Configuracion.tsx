@@ -1,6 +1,90 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, AlertTriangle } from 'lucide-react';
-import { type Config, DEFAULT_CONFIG, loadConfig, saveConfig } from '../../lib/config';
+import { CheckCircle2, AlertTriangle, Plus, Trash2, MapPin } from 'lucide-react';
+import { type Config, DEFAULT_CONFIG, loadConfig, saveConfig, getZonas } from '../../lib/config';
+import type { ZonaEntrega } from '../../types';
+
+/* Editor de zonas/rutas de entrega: agregar, renombrar, ventana horaria
+   propia y eliminar. Se guarda con el botón general "Guardar cambios". */
+const ZonasEditor: React.FC<{
+  zonas: ZonaEntrega[];
+  onChange: (zonas: ZonaEntrega[]) => void;
+}> = ({ zonas, onChange }) => {
+  const [nueva, setNueva] = useState('');
+
+  const agregar = () => {
+    const nombre = nueva.trim();
+    if (!nombre) return;
+    if (zonas.some((z) => z.nombre.toLowerCase() === nombre.toLowerCase())) {
+      setNueva('');
+      return;
+    }
+    onChange([...zonas, { id: `z-${Date.now()}`, nombre }]);
+    setNueva('');
+  };
+
+  const actualizar = (id: string, cambios: Partial<ZonaEntrega>) =>
+    onChange(zonas.map((z) => (z.id === id ? { ...z, ...cambios } : z)));
+
+  const eliminar = (id: string) => onChange(zonas.filter((z) => z.id !== id));
+
+  return (
+    <div className="space-y-2">
+      {zonas.map((z) => (
+        <div key={z.id} className="flex flex-col gap-2 rounded-xl border border-stone-200 bg-white p-3 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <MapPin size={14} className="shrink-0 text-brand-green" />
+            <input
+              type="text"
+              value={z.nombre}
+              onChange={(e) => actualizar(z.id, { nombre: e.target.value })}
+              className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm font-medium text-stone-800 transition focus:border-brand-green/40 focus:bg-stone-50 focus:outline-none"
+              placeholder="Nombre de la zona"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={z.ventana ?? ''}
+              onChange={(e) => actualizar(z.id, { ventana: e.target.value || undefined })}
+              className="w-40 rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1.5 text-xs text-stone-600 focus:border-brand-green/40 focus:outline-none"
+              placeholder="Horario (opcional)"
+            />
+            <button
+              type="button"
+              onClick={() => eliminar(z.id)}
+              title="Eliminar zona"
+              className="shrink-0 rounded-lg p-2 text-stone-400 transition hover:bg-red-50 hover:text-red-500"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        </div>
+      ))}
+      {zonas.length === 0 && (
+        <p className="rounded-xl border border-dashed border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+          Sin zonas: los clientes no podrán elegir dónde recibir. Agrega al menos una.
+        </p>
+      )}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={nueva}
+          onChange={(e) => setNueva(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); agregar(); } }}
+          className="input-field flex-1"
+          placeholder="Nueva zona (ej: Peñuelas, Tierras Blancas...)"
+        />
+        <button
+          type="button"
+          onClick={agregar}
+          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-brand-green px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
+        >
+          <Plus size={14} /> Agregar
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export const AdminConfiguracion: React.FC = () => {
   const [config, setConfig] = useState<Config>(DEFAULT_CONFIG);
@@ -176,25 +260,17 @@ export const AdminConfiguracion: React.FC = () => {
           </ul>
         </Section>
 
-        {/* Cobertura */}
-        <Section title="Sectores de Cobertura">
-          <div className="space-y-2">
-            {([
-              { key: 'la_serena', label: 'La Serena' },
-              { key: 'coquimbo', label: 'Coquimbo' },
-              { key: 'las_companias', label: 'Las Compañías' },
-            ] as { key: keyof Config['sectors']; label: string }[]).map(({ key, label }) => (
-              <label key={key} className="flex cursor-pointer items-center gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3 transition hover:bg-stone-50">
-                <input
-                  type="checkbox"
-                  checked={config.sectors[key]}
-                  onChange={(e) => set('sectors', { ...config.sectors, [key]: e.target.checked })}
-                  className="h-4 w-4 rounded border-stone-300 accent-brand-green"
-                />
-                <span className="text-sm font-medium text-stone-700">{label}</span>
-              </label>
-            ))}
-          </div>
+        {/* Zonas / rutas de entrega — editables */}
+        <Section title="Zonas de entrega (rutas)">
+          <p className="mb-3 text-xs text-stone-500">
+            Estas zonas aparecen en el checkout del cliente, en los filtros de Pedidos y agrupan la
+            Ruta del Día. Agrega, renombra o elimina las que necesites. La ventana horaria es
+            opcional (si la dejas vacía se usa la general de arriba).
+          </p>
+          <ZonasEditor
+            zonas={getZonas(config)}
+            onChange={(zonas) => set('zonas', zonas)}
+          />
         </Section>
 
         {/* Métodos de pago */}

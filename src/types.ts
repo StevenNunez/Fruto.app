@@ -24,7 +24,20 @@ export type PaymentStatus = 'pendiente_pago' | 'pagado' | 'pendiente_transferenc
 /** Mañana = planificado (envío gratis sobre umbral). Hoy = urgente (siempre paga despacho). */
 export type DeliveryMode = 'manana' | 'hoy';
 
-export type Sector = 'La Serena' | 'Coquimbo' | 'Las Compañías';
+/**
+ * Zona/ruta de entrega. Desde 2026-07-18 las zonas son DINÁMICAS: el
+ * admin las crea y edita en /admin/configuracion (config.zonas). Por eso
+ * el tipo es string y no una lista fija.
+ */
+export type Sector = string;
+
+/** Zona de entrega editable por el admin (vive en config.zonas). */
+export type ZonaEntrega = {
+  id: string;
+  nombre: string;
+  /** Ventana horaria propia de la zona (opcional; si falta se usa la global). */
+  ventana?: string;
+};
 
 /** Datos de entrega guardados del cliente con cuenta (tabla profiles). */
 export type Profile = {

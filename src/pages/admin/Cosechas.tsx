@@ -127,6 +127,27 @@ export const AdminCosechas: React.FC = () => {
   const noData = rows.filter((r) => r.status === 'sinstock' && r.demand > 0);
   const activeOrders = orders.filter(orderReservesStock);
 
+  // LA LISTA DE COMPRAS DE LA MAÑANA: cuánto falta comprar para cumplir
+  // todos los pedidos activos, agregado por producto (sin revisar pedido
+  // por pedido). faltante = demanda - lo que tengo; sugerido = +30% colchón.
+  const paraComprar = useMemo(
+    () =>
+      rows
+        .map((r) => {
+          const disponible = r.status === 'sinstock' ? 0 : Math.max(0, r.initialStock);
+          const faltante = Math.max(0, r.demand - disponible);
+          return { ...r, faltante, sugerido: Math.ceil(faltante * 1.3) };
+        })
+        .filter((r) => r.faltante > 0)
+        .sort((a, b) => b.faltante - a.faltante),
+    [rows]
+  );
+
+  // Stock bajo sin faltante urgente: conviene reponer aunque alcance hoy.
+  const stockBajo = rows.filter(
+    (r) => (r.status === 'bajo' || r.status === 'agotado') && !paraComprar.some((c) => c.id === r.id)
+  );
+
   const commitEdit = (id: string) => {
     const val = parseFloat(inputVal);
     const newVal = isNaN(val) || val < 0 ? 0 : val;
@@ -158,14 +179,86 @@ export const AdminCosechas: React.FC = () => {
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">Cosechas e Inventario</h1>
-          <p className="mt-1 text-sm text-stone-500">Registra cuánto tienes de cada producto. Los pedidos activos se restan solos, y al marcar un pedido como Entregado se rebaja de tu stock automáticamente.</p>
+          <h1 className="text-2xl font-bold text-stone-800">Compras del día e inventario</h1>
+          <p className="mt-1 text-sm text-stone-500">
+            Lo primero es lo que te falta comprar esta mañana para cumplir todos los pedidos —
+            sumado por producto, sin revisar pedido por pedido.
+          </p>
         </div>
         <button type="button" onClick={handlePrint}
           className="flex shrink-0 items-center gap-2 rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-400 active:scale-95">
           <Printer size={15} />Imprimir lista de compras
         </button>
       </div>
+
+      {/* ══ QUÉ COMPRAR ESTA MAÑANA ══ */}
+      {paraComprar.length > 0 ? (
+        <div className="mb-6 overflow-hidden rounded-2xl border border-brand-orange/30 bg-white">
+          <div className="border-b border-brand-orange/20 bg-brand-orange/5 px-5 py-4">
+            <div className="flex items-center gap-2">
+              <ShoppingCart size={17} className="text-brand-orange" />
+              <h2 className="text-base font-bold text-stone-800">Qué comprar esta mañana</h2>
+            </div>
+            <p className="mt-0.5 text-xs text-stone-500">
+              {activeOrders.length} {activeOrders.length === 1 ? 'pedido activo espera' : 'pedidos activos esperan'} estos
+              productos. El sugerido incluye un 30% de colchón.
+            </p>
+          </div>
+          <div className="divide-y divide-stone-100">
+            {paraComprar.map((r) => (
+              <div key={r.id} className="flex items-center gap-3 px-5 py-3.5">
+                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-stone-100">
+                  {r.image ? (
+                    <img src={r.image} alt={r.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <Package size={16} className="text-stone-300" />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-stone-800">{r.name}</p>
+                  <p className="text-xs text-stone-400">
+                    Pedido: {r.demand} {r.unit} · Tienes:{' '}
+                    {r.status === 'sinstock' ? 'sin registrar' : `${Math.max(0, r.initialStock)} ${r.unit}`}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-lg font-bold text-brand-orange">
+                    {r.faltante} {r.unit}
+                  </p>
+                  <p className="text-[11px] text-stone-400">sugerido: {r.sugerido} {r.unit}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+          <CheckCircle2 size={18} className="shrink-0 text-emerald-600" />
+          <div>
+            <p className="text-sm font-bold text-emerald-800">No necesitas comprar nada urgente</p>
+            <p className="text-xs text-emerald-700">
+              Tu stock alcanza para todos los pedidos activos
+              {activeOrders.length > 0 ? ` (${activeOrders.length})` : ''}.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Stock bajo (sin urgencia, pero conviene reponer) */}
+      {stockBajo.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+          <p className="text-sm font-bold text-amber-800">Aprovecha de reponer (stock bajo)</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {stockBajo.map((r) => (
+              <span key={r.id} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-800">
+                {r.name} · quedan {Math.max(0, r.remaining)} {r.unit}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className={cn('rounded-2xl border px-4 py-3', needsRestock.length > 0 ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50')}>
